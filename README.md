@@ -1,24 +1,47 @@
 # Friendly
 
-Friendly is a web application designed to help newcomers in Ireland build meaningful social connections through shared interests, languages, location and community events.
+Friendly is a community integration web application designed to help newcomers in Ireland build meaningful local friendships through shared languages, interests, location and community meetups.
 
 ## The Problem
 
-People who move to a new country may find it difficult to build a social circle, meet people with similar interests and discover relevant local activities.
+Moving to a new country can be exciting, but it can also be isolating.
 
-General social media platforms are not always designed specifically for newcomers who want structured, local and interest-based connections.
+Newcomers may struggle to:
+
+* Build a new social circle
+* Meet people with a familiar language or cultural background
+* Find people with similar interests
+* Discover welcoming local activities
+* Attend social events where everyone already seems to know each other
+
+Existing social media and event platforms are not always designed specifically for people who are starting their social lives from scratch in a new country.
 
 ## The Proposed Solution
 
-Friendly will provide a platform where users can:
+Friendly will provide a structured platform where newcomers can:
 
 * Create and manage a personal profile
 * Add their city, languages and interests
-* Discover people with shared interests
-* Receive recommendations through a simple matching algorithm
-* Browse local community events
-* Create community events
-* Join and leave events
+* Select their current stage of relocation
+* Find people with similar backgrounds and interests
+* Receive recommendations through a transparent matching algorithm
+* Discover community meetups where newcomers can meet in a welcoming environment
+* Create, join and leave community meetups
+
+## Target Users
+
+Friendly is designed primarily for newcomers and international residents living in Ireland.
+
+Users may choose to connect with:
+
+* People who speak the same language
+* People from a similar cultural background
+* People with shared interests
+* People living in the same city
+* Other recently arrived newcomers
+* Long-term residents who are happy to support newcomers
+
+The initial project was inspired by the experience of Ukrainians building new social circles after moving to Ireland, but the platform can support people from different national and cultural backgrounds.
 
 ## MVP Features
 
@@ -26,15 +49,26 @@ The first working version will include:
 
 * User registration and login
 * User profiles
-* Interests
+* City
 * Languages
-* City-based information
-* Interest-based matching
-* Community event creation
-* Event discovery
-* Join and leave event functionality
+* Interests
+* Relocation stage
+* Rule-based user recommendations
+* Community meetup creation
+* Community meetup discovery
+* Join and leave meetup functionality
 * MySQL database
 * Responsive Flask web interface
+
+## Relocation Stages
+
+Users will be able to select one of the following:
+
+* Recently arrived
+* Settling in
+* Living in Ireland for more than one year
+* Long-term resident
+* Happy to support newcomers
 
 ## Not Included in the MVP
 
@@ -47,7 +81,7 @@ The first version will not include:
 * Payments
 * Video calls
 * Artificial intelligence
-* Native iOS or Android applications
+* Native mobile applications
 * Advanced moderation systems
 
 These features may be considered for future development.
@@ -60,6 +94,7 @@ These features may be considered for future development.
 * HTML
 * CSS
 * Bootstrap
+* Minimal JavaScript
 * Git
 * GitHub
 
@@ -67,10 +102,10 @@ These features may be considered for future development.
 
 This project is being developed to:
 
-* Solve a real social connection problem
+* Address a real social integration problem
 * Apply Python in a full-stack web application
 * Develop relational database design skills
-* Build and explain a matching algorithm
+* Design and explain a transparent matching algorithm
 * Practise Git and GitHub workflows
 * Create a portfolio project for Software Development Internship applications
 
@@ -79,4 +114,3 @@ This project is being developed to:
 Planning and initial development.
 
 The software design, database architecture, implementation and technical documentation are being developed by Cynthia Vrubel.
-
