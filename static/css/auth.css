@@ -64,7 +64,22 @@ form { display:grid; gap:16px; }
 .privacy-note { display:flex; align-items:center; justify-content:center; gap:7px; margin:16px 0 0; color:#788981; font-size:.68rem; }
 .privacy-note svg { width:14px; height:14px; flex:0 0 14px; fill:none; stroke:var(--auth-green); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
 
+/* Login and temporary dashboard */
+.login-card { max-width:520px; }
+.login-options { display:flex; align-items:center; justify-content:space-between; gap:12px 20px; }
+.checkbox-field { display:inline-flex; align-items:center; gap:8px; color:var(--auth-muted); cursor:pointer; font-size:.75rem; }
+.checkbox-field input { width:17px; height:17px; margin:0; accent-color:var(--auth-primary); }
+.forgot-link { color:#788981; font-size:.72rem; text-align:right; }
+.forgot-link small { margin-left:3px; color:#9a8177; font-size:.57rem; font-weight:700; letter-spacing:.04em; text-transform:uppercase; }
+.dashboard-main { place-items:center; }
+.dashboard-card { max-width:580px; text-align:center; }
+.dashboard-card .auth-eyebrow { margin-bottom:10px; }
+.dashboard-copy { margin:16px auto 0; color:var(--auth-muted); font-size:.9rem; }
+.dashboard-card form { margin-top:28px; }
+.logout-button { max-width:220px; margin-inline:auto; }
+
 /* Responsive registration layout */
 @media (max-width:600px) { .auth-header,.auth-main { width:calc(100% - 40px); } .auth-header { padding-block:18px; } .auth-main { min-height:0; padding:12px 0 44px; } .auth-card { padding:26px 22px; } .name-fields { grid-template-columns:minmax(0,1fr); gap:16px; } }
+@media (max-width:420px) { .login-options { align-items:flex-start; flex-direction:column; gap:10px; } .forgot-link { text-align:left; } }
 @media (max-width:359px) { .auth-header,.auth-main { width:calc(100% - 32px); } .auth-card { padding:25px 18px; } .auth-intro { margin-bottom:23px; } }
 @media (prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; transition-duration:.01ms!important; animation-duration:.01ms!important; animation-iteration-count:1!important; } }

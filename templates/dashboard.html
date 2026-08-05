@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dashboard | Friendly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+</head>
+<body>
+    <header class="auth-header">
+        <a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home">
+            <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg>
+            <span>Friendly</span>
+        </a>
+    </header>
+    <main class="auth-main dashboard-main">
+        <section class="auth-card dashboard-card" aria-labelledby="dashboard-heading">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}<div class="flash-list" aria-live="polite">{% for category, message in messages %}<p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>{% endfor %}</div>{% endif %}
+            {% endwith %}
+            <p class="auth-eyebrow">You're signed in</p>
+            <h1 id="dashboard-heading">Welcome to Friendly, {{ current_user.first_name }}</h1>
+            <p class="dashboard-copy">Your account is ready. Profile creation and community recommendations are coming next.</p>
+            <form method="post" action="{{ url_for('logout') }}">
+                {{ logout_form.hidden_tag() }}
+                {{ logout_form.submit(class="submit-button logout-button") }}
+            </form>
+        </section>
+    </main>
+</body>
+</html>
