@@ -1,8 +1,17 @@
 from datetime import datetime
 
 from flask import Flask, render_template
+from flask_migrate import Migrate
+
+from config import DevelopmentConfig
+from models import db
 
 app = Flask(__name__)
+app.config.from_object(DevelopmentConfig)
+
+# Extensions are initialized without creating tables; schema changes use migrations.
+db.init_app(app)
+migrate = Migrate(app, db)
 
 
 @app.context_processor
