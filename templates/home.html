@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Friendly helps newcomers and long-term residents in Ireland build meaningful friendships through shared interests, languages and local meetups.">
+    <title>Friendly | Find your people. Feel at home.</title>
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.png') }}" type="image/png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+        <nav class="nav shell" aria-label="Main navigation">
+            <a class="brand" href="{{ url_for('home') }}" aria-label="Friendly home">
+                <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg>
+                <span>Friendly</span>
+            </a>
+            <button class="menu-button" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation">
+                <span></span><span></span><span></span>
+            </button>
+            <div class="nav-links" id="nav-links">
+                <div class="nav-primary"><a href="#features">Features</a><a href="#meetups">Meetups</a><a href="#about">About</a></div>
+                <div class="nav-account"><a href="{{ url_for('login') }}">Log In</a><a class="button button-small" href="{{ url_for('register') }}">Get Started</a></div>
+            </div>
+        </nav>
+    </header>
+
+    <main id="main-content">
+        <section class="hero">
+            <div class="shell hero-layout">
+                <div class="hero-copy">
+                    <p class="kicker"><span></span>Built for belonging</p>
+                    <h1>Find your people.<br><em>Feel at home.</em></h1>
+                    <p class="hero-summary">Friendly helps newcomers and long-term residents in Ireland build meaningful friendships through shared languages, interests and welcoming community meetups.</p>
+                    <div class="button-row">
+                        <a class="button" href="{{ url_for('register') }}">Create Your Profile <span aria-hidden="true">&rarr;</span></a>
+                        <a class="button button-quiet" href="#meetups">Explore Meetups</a>
+                    </div>
+                    <div class="hero-assurance">
+                        <span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 10 3 3 7-7"/></svg>Free to join</span>
+                        <span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 4 5v4c0 4 2.6 7.1 6 9 3.4-1.9 6-5 6-9V5l-6-3Z"/></svg>Made for real connection</span>
+                    </div>
+                </div>
+
+                <div class="product-scene" aria-label="An example Friendly community with nearby people, a compatible connection and an upcoming meetup">
+                    <div class="scene-ambient" aria-hidden="true"></div>
+                    <div class="scene-pattern" aria-hidden="true"></div>
+                    <div class="community-orbit" aria-hidden="true"><span class="orbit-person person-one">O</span><span class="orbit-person person-two">M</span><span class="orbit-person person-three">S</span></div>
+                    <article class="dashboard-card community-preview">
+                        <header class="community-header"><div><span class="mini-label">Nearby community</span><h2>People you may feel at home with</h2><p>Open to new connections</p></div><span class="live-count"><i></i>24 nearby</span></header>
+                        <ul class="people-list">
+                            <li><span class="person-avatar anna">A</span><span><strong>Anna</strong><small class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Dublin</small></span><span class="common">Ukrainian <i>&middot;</i> Coffee</span><b>92%</b></li>
+                            <li><span class="person-avatar oleksii">O</span><span><strong>Oleksii</strong><small class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Bray</small></span><span class="common">Hiking <i>&middot;</i> English</span><b>88%</b></li>
+                            <li><span class="person-avatar maeve">M</span><span><strong>Maeve</strong><small class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Dublin</small></span><span class="common">Photography <i>&middot;</i> Coffee</span><b>84%</b></li>
+                        </ul>
+                        <footer class="community-footer"><span class="avatar-stack" aria-hidden="true"><i>A</i><i>O</i><i>M</i><i>+9</i></span><p><strong>12 new connections</strong><span>in <span class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Dublin</span> this week</span></p></footer>
+                    </article>
+                    <article class="dashboard-card match-float"><span class="match-symbol" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></span><span><small>Great match</small><strong>3 things in common</strong></span><b>92%</b></article>
+                    <article class="dashboard-card meetup-preview">
+                        <div class="date-tile"><strong>18</strong><span>OCT</span></div>
+                        <div><span class="mini-label">Upcoming meetup</span><h3>Saturday coastal walk</h3><p><span class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Dun Laoghaire</span> <span aria-hidden="true">&middot;</span> 8 people joining</p></div><span class="event-go" aria-hidden="true">&rarr;</span>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="trust" aria-labelledby="trust-title">
+            <div class="shell trust-layout">
+                <div><p class="section-kicker">Growing together</p><h2 id="trust-title">Helping people connect across Ireland</h2><p>Early community figures shown while Friendly prepares to launch.</p></div>
+                <dl class="community-stats"><div><dt><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6m3-3h-6"/></svg></span>2,000<span>+</span></dt><dd>future members</dd></div><div><dt><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5.8 11.3 6.9 6.9M4 3l.7 3.2L8 7 4.7 7.8 4 11l-.8-3.2L0 7l3.2-.8L4 3Zm14 0 .7 3.2 3.3.8-3.3.7-.7 3.3-.8-3.3-3.2-.7 3.2-.8.8-3.2ZM14 2l.5 2 2 .5-2 .5-.5 2-.5-2-2-.5 2-.5.5-2Z"/><path d="m12 3 9 9-3 3-9-9 3-3Z"/></svg></span>180<span>+</span></dt><dd>meetup ideas</dd></div><div><dt><span class="stat-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg></span>30<span>+</span></dt><dd>Irish cities &amp; towns</dd></div></dl>
+                <ul class="trust-values"><li>Shared interests</li><li>Familiar languages</li><li>Welcoming meetups</li></ul>
+            </div>
+        </section>
+
+        <section class="section features" id="features">
+            <div class="shell">
+                <header class="section-heading"><p class="section-kicker">Simple from the start</p><h2>How Friendly Works</h2><p>From creating a profile to meeting people in person, Friendly keeps every step comfortable and clear.</p></header>
+                <div class="feature-grid">
+                    <article class="feature-card">
+                        <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2.5 21v-2a5 5 0 0 1 5-5h3a5 5 0 0 1 5 5v2m1-12h5m-2.5-2.5v5"/></svg></span>
+                        <h3>Create your profile</h3><p>Share your city, languages, interests and relocation experience at your own pace.</p><a href="{{ url_for('register') }}">Create your profile <span aria-hidden="true">&rarr;</span></a>
+                    </article>
+                    <article class="feature-card">
+                        <span class="feature-icon green"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8Z"/></svg></span>
+                        <h3>Discover your people</h3><p>Meet newcomers and local residents with meaningful interests and experiences in common.</p><a href="#about">Why Friendly works <span aria-hidden="true">&rarr;</span></a>
+                    </article>
+                    <article class="feature-card">
+                        <span class="feature-icon warm"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3v3m10-3v3M4 9h16M5 5h14a1 1 0 0 1 1 1v14H4V6a1 1 0 0 1 1-1Z"/><path d="m8 14 2 2 5-5"/></svg></span>
+                        <h3>Join community meetups</h3><p>Take part in relaxed local activities created to make meeting in person feel natural.</p><a href="#meetups">Explore meetups <span aria-hidden="true">&rarr;</span></a>
+                    </article>
+                </div>
+            </div>
+        </section>
+
+        <section class="section about" id="about">
+            <div class="shell about-layout">
+                <p class="about-statement">The hardest part of moving is not always the paperwork. It is finding your people.</p>
+                <div><p class="section-kicker">Why Friendly exists</p><h2>Because a new place feels different when someone knows your name.</h2><p>Friendly offers a gentler way to meet people who understand what starting again can feel like.</p><p>Real friendships begin with shared moments, not endless swiping.</p><div class="about-principle"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s8-4 8-11V5l-8-3-8 3v5c0 7 8 11 8 11Z"/><path d="m9 11 2 2 4-4"/></svg><span><strong>Connection with purpose</strong>Meet safely, locally and naturally.</span></div></div>
+            </div>
+        </section>
+
+        <section class="section meetups" id="meetups">
+            <div class="shell meetups-layout">
+                <header class="section-heading compact"><p class="section-kicker">Meet in your community</p><h2>Real moments start nearby.</h2><p>Relaxed, welcoming activities make it easier to say hello and find common ground.</p><p class="sample-note">Preview events shown for illustration.</p></header>
+                <div class="event-list">
+                    <article><time datetime="2026-10-24"><strong>24</strong><span>OCT</span></time><div><span class="event-type">Example meetup</span><h3>Coffee for Newcomers</h3><p class="event-meta"><span class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Cork</span> <span>&middot;</span> English &amp; Ukrainian</p><p>Coffee tastes better when you are not drinking it alone.</p><footer class="event-details"><span class="host-avatar" aria-hidden="true">O</span><span>Olena is hosting</span><span>90 minutes</span><span class="attendance badge badge--available">8 places left</span></footer></div></article>
+                    <article><time datetime="2026-10-18"><strong>18</strong><span>OCT</span></time><div><span class="event-type">Example meetup</span><h3>Saturday Coastal Walk</h3><p class="event-meta"><span class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Dublin</span> <span>&middot;</span> English</p><p>An easy-paced walk by the sea, with plenty of time to talk.</p><footer class="event-details"><span class="host-avatar host-blue" aria-hidden="true">M</span><span>Mark is hosting</span><span>2 hours</span><span class="attendance badge badge--available">6 joining</span></footer></div></article>
+                    <article><time datetime="2026-11-02"><strong>02</strong><span>NOV</span></time><div><span class="event-type">Example meetup</span><h3>International Board Game Evening</h3><p class="event-meta"><span class="city-location"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>Galway</span> <span>&middot;</span> Multiple languages</p><p>Simple games and an easy way to laugh with someone new.</p><footer class="event-details"><span class="host-avatar host-sage" aria-hidden="true">S</span><span>Sofia is hosting</span><span>2 hours</span><span class="attendance badge badge--available">10 places left</span></footer></div></article>
+                </div>
+            </div>
+        </section>
+
+        <section class="final-cta">
+            <div class="shell cta-content"><p class="section-kicker">Your community is closer than you think</p><h2>Ready to meet your community?</h2><p>Every meaningful friendship begins with saying hello.</p><a class="button button-light" href="{{ url_for('register') }}">Create Your Profile <span aria-hidden="true">&rarr;</span></a></div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="shell footer-main">
+            <div class="footer-brand"><a class="brand" href="{{ url_for('home') }}"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><p>Meaningful friendships, rooted in real communities across Ireland.</p></div>
+            <nav aria-label="Community links"><h2>Community</h2><a href="#features">How it works</a><a href="#meetups">Meetups</a><a href="#about">Our story</a><span>FAQ <small>Soon</small></span></nav>
+            <nav aria-label="Resource links"><h2>Resources</h2><span>Blog <small>Soon</small></span><span>Safety <small>Soon</small></span><a href="mailto:hello@friendly.ie">Contact</a></nav>
+            <nav aria-label="Company links"><h2>Company</h2><span>Privacy <small>Soon</small></span><span>Terms <small>Soon</small></span><span>Accessibility <small>Soon</small></span></nav>
+            <nav aria-label="Social links"><h2>Follow</h2><span>Instagram <small>Soon</small></span><span>LinkedIn <small>Soon</small></span><span>GitHub <small>Soon</small></span></nav>
+        </div>
+        <div class="shell footer-bottom"><p>&copy; {{ current_year }} Friendly. All rights reserved.</p><p>Made with care in Ireland.</p></div>
+    </footer>
+
+    <script>
+        const toggle = document.querySelector('.menu-button');
+        const navigation = document.querySelector('.nav-links');
+        const closeMenu = () => {
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.setAttribute('aria-label', 'Open navigation');
+            navigation.classList.remove('is-open');
+        };
+        toggle.addEventListener('click', () => {
+            const opening = toggle.getAttribute('aria-expanded') !== 'true';
+            toggle.setAttribute('aria-expanded', String(opening));
+            toggle.setAttribute('aria-label', opening ? 'Close navigation' : 'Open navigation');
+            navigation.classList.toggle('is-open', opening);
+        });
+        navigation.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+        document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+        if ('IntersectionObserver' in window && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            const items = document.querySelectorAll('.section-heading, .feature-card, .event-list article, .about-layout > *, .trust-layout > *');
+            document.documentElement.classList.add('reveal-ready');
+            const observer = new IntersectionObserver(entries => entries.forEach(entry => {
+                if (entry.isIntersecting) { entry.target.classList.add('revealed'); observer.unobserve(entry.target); }
+            }), { threshold: 0.12 });
+            items.forEach((item, index) => { item.style.setProperty('--reveal-delay', `${(index % 4) * 55}ms`); observer.observe(item); });
+        }
+    </script>
+</body>
+</html>

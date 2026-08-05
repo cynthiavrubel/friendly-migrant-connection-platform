@@ -1,14 +1,30 @@
-from flask import Flask
+from datetime import datetime
+
+from flask import Flask, render_template
 
 app = Flask(__name__)
 
 
+@app.context_processor
+def inject_current_year():
+    """Make the current year available to shared page content."""
+    return {"current_year": datetime.now().year}
+
+
 @app.route("/")
 def home():
-    return """
-    <h1>Friendly</h1>
-    <p>This is the beginning of my Software Development portfolio project.</p>
-    <button><b>Get Started</b></button>    """
+    return render_template("home.html")
+
+
+# Temporary routes until authentication is implemented.
+@app.route("/login")
+def login():
+    return "Log in is coming soon."
+
+
+@app.route("/register")
+def register():
+    return "Registration is coming soon."
 
 
 if __name__ == "__main__":
