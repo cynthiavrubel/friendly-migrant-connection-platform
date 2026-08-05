@@ -1,6 +1,7 @@
 """Application configuration loaded from local environment variables."""
 
 import os
+from datetime import timedelta
 
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL
@@ -29,6 +30,7 @@ class Config:
     SECRET_KEY = os.getenv("SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = build_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
 
 
 class DevelopmentConfig(Config):

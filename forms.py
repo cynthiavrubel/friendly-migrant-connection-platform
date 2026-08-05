@@ -3,7 +3,7 @@
 import re
 
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, StringField, SubmitField
+from wtforms import BooleanField, PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
 
 
@@ -39,3 +39,22 @@ class RegistrationForm(FlaskForm):
             missing_requirements.append("one number")
         if missing_requirements:
             raise ValidationError(f"Password must include at least {', '.join(missing_requirements)}.")
+
+
+class LoginForm(FlaskForm):
+    """Validate credentials submitted through the login page."""
+
+    email = StringField(
+        "Email address",
+        filters=[normalize_email],
+        validators=[DataRequired(), Email(), Length(max=255)],
+    )
+    password = PasswordField("Password", validators=[DataRequired()])
+    remember_me = BooleanField("Remember me")
+    submit = SubmitField("Log In")
+
+
+class LogoutForm(FlaskForm):
+    """Provide CSRF protection for the logout action."""
+
+    submit = SubmitField("Log Out")
