@@ -1,121 +1,91 @@
 # Friendly
 
-Helping newcomers in Ireland build meaningful friendships through shared interests, languages and local community meetups.
+Friendly helps newcomers, international residents, locals and travellers build meaningful local connections across Europe through shared languages, interests and Community Plans.
 
----
+Ireland inspired the idea and remains Friendly's origin story. The product is now being architected as a Europe-first, global-ready platform rather than an Ireland-only service.
 
-## About the Project
+## About the product
 
-Moving to a new country can be exciting, but it can also be lonely.
+Moving somewhere new—or arriving in a city for a short stay—can make it difficult to find people with whom everyday activities feel natural. Friendly is designed to make that first connection easier without becoming another follower-driven social network or dating application.
 
-Friendly is a web application designed to help newcomers in Ireland build genuine friendships by connecting people based on shared interests, languages and local community events.
+Users will be able to discover people in a selected city, understand what they have in common, and connect through casual user-created Community Plans such as coffee, a museum visit, a walk or a board-game evening.
 
-Unlike traditional social media, Friendly focuses on meaningful, real-world connections.
+## Product principles
 
----
+- Local discovery without live GPS or private-address sharing
+- Meaningful connections rather than endless scrolling
+- Transparent recommendations based on voluntary profile information
+- Support for permanent residents, recent arrivals, locals and travellers
+- Europe-first location design that can expand globally
+- Warm, accessible and privacy-conscious experiences
 
-## Current Features
+## Current completed features
 
-- Modern responsive landing page
-- Mobile-first responsive design
-- Beautiful user experience
-- Community-focused branding
-- Flask backend
-- Clean project architecture
+- Responsive public landing page
+- Account registration with server-side validation and CSRF protection
+- Secure password hashing
+- Login, session and logout flows
+- Protected dashboard foundation
+- MySQL database integration and controlled migrations
+- Responsive authentication interfaces
 
----
+Profile, discovery and Community Plans functionality remains under active development and should not yet be treated as launched product functionality.
 
-## Planned Features
+## Planned MVP capabilities
 
-- User authentication
-- User profiles
-- Profile photos
-- Interests and hobbies
-- Spoken languages
-- Smart matching algorithm
-- Meetup discovery
-- Event registration
-- Personal dashboard
-- Messaging
-- Admin dashboard
+- Home country and city
+- Active discovery country and city, independent of home location
+- Connection intentions such as living locally, visiting or travelling soon
+- Languages, interests and connection availability
+- Location-filtered people discovery with transparent compatibility reasons
+- User-created Community Plans
+- Plan browsing and details by country and city
+- Joining and leaving plans
+- Editing or cancelling plans created by the current user
+- Views for plans a user created or joined
 
----
+The first MVP will not include payments, ticket purchasing, live GPS, real-time chat, recurring plans, calendar synchronization, private invitations, approval workflows or push notifications.
 
-## Technology Stack
+## Technology stack
 
 ### Backend
 
 - Python
 - Flask
+- Flask-SQLAlchemy
+- Flask-Migrate
+- Flask-WTF
+- Werkzeug password hashing
 
 ### Frontend
 
-- HTML5
-- CSS3
-- JavaScript
+- Semantic HTML5
+- Modern plain CSS
+- Minimal vanilla JavaScript
 
-### Database
+### Data and development
 
 - MySQL
+- PyMySQL
+- Alembic migrations through Flask-Migrate
+- Git and GitHub
 
-### Tools
+## Project status
 
-- Git
-- GitHub
-- VS Code
+Friendly is under active development and is being prepared as a real product, not only as coursework or a demonstration project.
 
----
+Current work is focused on reshaping profile and location architecture for the Europe-first direction before implementing people discovery and Community Plans.
 
-## Project Status
+## Design direction
 
-🚧 Currently under active development.
+Friendly should feel warm, welcoming, calm, modern, trustworthy and accessible. Its design philosophy draws inspiration from the clarity and restraint of products such as Airbnb, Notion and Stripe without copying their visual identity.
 
-### Completed
+## Origin
 
-- Landing page
-- Responsive design
-- Homepage UI/UX
-
-### Currently Working On
-
-- User authentication
-- Database design
-- User profiles
-
----
-
-## Design Goals
-
-Friendly is designed to feel:
-
-- Warm
-- Welcoming
-- Modern
-- Minimalist
-- Trustworthy
-
-Design inspiration comes from products such as Airbnb, Notion and Stripe.
-
----
-
-## Future Roadmap
-
-- Authentication
-- Profile creation
-- Matching system
-- Meetups
-- Dashboard
-- Notifications
-- Deployment
-
----
+Friendly began in Cork, Ireland, from the observation that relocation can be socially isolating even when a city is full of people and activities. That experience informs the product, but no longer limits who or where Friendly can support.
 
 ## Author
 
 **Cynthia Vrubel**
 
-Software Development Student
-
-University College Cork
-
-Building Friendly as both a portfolio project and a real product for newcomers living in Ireland.
+Building Friendly as a production-minded software product and portfolio project.

@@ -1,66 +1,80 @@
-# Matching Algorithm – Initial Design
+# Matching Algorithm — Initial Design
 
-Friendly will calculate a compatibility score between the currently logged-in user and other users.
+Friendly will begin with a transparent rule-based recommendation system rather than artificial intelligence.
 
-The MVP will use a transparent rule-based algorithm rather than artificial intelligence.
+## Two-stage discovery
 
-## Initial Scoring Rules
+Location is a discovery filter, not a low-weight compatibility signal.
 
-* 3 points for each shared interest
-* 2 points if both users live in the same city
-* 2 points for each shared language
-* 1 point if both users are at a similar relocation stage
-* 1 additional point if the candidate is happy to support newcomers and the current user recently arrived
+### Stage 1: establish the local discovery pool
+
+A candidate is eligible only when:
+
+1. their discoverable country matches the current user's active discovery country;
+2. their discoverable city matches the current user's active discovery city;
+3. they are open to connection;
+4. they are not the currently logged-in user;
+5. neither user has blocked the other when blocking is introduced.
+
+The discovery location may differ from the user's home location.
+
+### Stage 2: rank eligible candidates
+
+Compatibility can then consider:
+
+- shared languages;
+- shared interests;
+- connection intention;
+- relocation or travel status;
+- whether a local resident is open to welcoming newcomers;
+- voluntarily supplied cultural preferences in a later version;
+- overlapping availability dates in a future version.
+
+Weights must be validated through product research and real usage rather than treated as permanent assumptions. Location should not receive points because it has already determined eligibility.
 
 ## Example
 
-### User A
+### Current user
 
-* City: Cork
-* Interests: Basketball, Reading, Technology
-* Languages: English, Ukrainian
-* Relocation stage: Recently arrived
+- Home location: Cork, Ireland
+- Active discovery location: Milan, Italy
+- Intention: Travelling soon
+- Languages: English, Ukrainian
+- Interests: Cinema, coffee, art
 
-### User B
+### Eligible candidate
 
-* City: Cork
-* Interests: Basketball, Technology, Cooking
-* Languages: English, Ukrainian
-* Relocation stage: Long-term resident
-* Happy to support newcomers: Yes
+- Home location: Milan, Italy
+- Active/discoverable location: Milan, Italy
+- Intention: Local resident
+- Open to welcoming newcomers: Yes
+- Languages: Italian, English
+- Interests: Cinema, museums, coffee
 
-## Score
+The candidate enters the pool because both users are discovering Milan and the candidate is open to connection. Shared English, cinema and coffee then affect ranking and recommendation explanations.
 
-* Two shared interests: 2 × 3 = 6 points
-* Same city: 2 points
-* Two shared languages: 2 × 2 = 4 points
-* Newcomer support compatibility: 1 point
+## Recommendation explanations
 
-Total match score: 13 points
+Friendly may explain recommendations with statements such as:
 
-## Expected Behaviour
+- You both speak English.
+- You share two interests.
+- You are both looking to connect in Milan.
+- This person is a local resident open to welcoming newcomers.
+- Your travel and connection intentions are compatible.
 
-The application will:
+## Privacy and integrity
 
-1. Exclude the currently logged-in user
-2. Retrieve other available user profiles
-3. Calculate a compatibility score for every candidate
-4. Sort candidates from highest to lowest score
-5. Display the strongest matches first
-6. Show the reasons behind each recommendation
+- Matching uses country and city, not live GPS or private addresses.
+- Only voluntarily supplied profile information should affect ranking.
+- Unsupported or missing location data must not silently place someone in another discovery pool.
+- Ranking should be deterministic and testable for the MVP.
+- Recommendation reasons must accurately reflect the underlying data.
 
-## Recommendation Reasons
+## Future considerations
 
-A user recommendation may display explanations such as:
-
-* You both speak Ukrainian
-* You both live in Cork
-* You share two interests
-* This user is happy to support newcomers
-* You are both currently settling into Ireland
-
-## Design Principle
-
-The algorithm should be easy for users and recruiters to understand.
-
-The weighting may be adjusted after testing the application with sample data.
+- optional availability windows;
+- time-zone-aware plan and travel dates;
+- user controls for distance beyond exact city matching;
+- quality and safety signals that do not unfairly disadvantage new users;
+- research-driven weight adjustments.
