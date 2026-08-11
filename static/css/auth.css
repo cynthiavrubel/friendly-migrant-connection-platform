@@ -77,6 +77,11 @@ form { display:grid; gap:16px; }
 .dashboard-copy { margin:16px auto 0; color:var(--auth-muted); font-size:.9rem; }
 .dashboard-card form { margin-top:28px; }
 .logout-button { max-width:220px; margin-inline:auto; }
+.action-link { width:max-content; min-width:170px; display:inline-grid; place-items:center; padding-inline:22px; text-decoration:none; }
+.dashboard-card>.action-link { margin-top:28px; }
+.dashboard-actions { display:flex; justify-content:center; align-items:center; gap:18px; margin-top:28px; }
+.dashboard-actions .action-link { margin:0; }
+.secondary-action { color:var(--auth-primary); font-size:.8rem; font-weight:700; text-underline-offset:4px; }
 
 /* Responsive registration layout */
 @media (max-width:600px) { .auth-header,.auth-main { width:calc(100% - 40px); } .auth-header { padding-block:18px; } .auth-main { min-height:0; padding:12px 0 44px; } .auth-card { padding:26px 22px; } .name-fields { grid-template-columns:minmax(0,1fr); gap:16px; } }

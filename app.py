@@ -8,8 +8,9 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 
 from config import DevelopmentConfig
-from forms import LoginForm, LogoutForm, RegistrationForm
-from models import User, db
+from forms import LoginForm, LogoutForm, ProfileForm, RegistrationForm
+from models import ConnectionIntent, Interest, Language, Profile, User, db
+from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -33,7 +34,24 @@ def load_current_user():
 @app.context_processor
 def inject_template_context():
     """Make common page context available without duplicating route logic."""
-    return {"current_year": datetime.now().year, "current_user": g.user}
+    return {"current_year": datetime.now().year, "current_user": g.user, "country_name": country_name}
+
+
+def configure_profile_choices(form):
+    """Populate reusable catalogue choices without coupling forms to the database."""
+    form.languages.choices = [(item.id, item.name) for item in db.session.scalars(db.select(Language).order_by(Language.name))]
+    form.interests.choices = [
+        (item.id, item.name) for item in db.session.scalars(db.select(Interest).order_by(Interest.category, Interest.name))
+    ]
+    form.connection_intents.choices = [
+        (item.id, item.name) for item in db.session.scalars(db.select(ConnectionIntent).order_by(ConnectionIntent.id))
+    ]
+
+
+def selected_records(model, identifiers):
+    """Resolve submitted catalogue IDs through SQLAlchemy, never trusting raw values."""
+    identifiers = set(identifiers or [])
+    return list(db.session.scalars(db.select(model).where(model.id.in_(identifiers)))) if identifiers else []
 
 
 def is_safe_next_url(target):
@@ -102,7 +120,12 @@ def register():
             if existing_user:
                 form.email.errors.append("An account with this email already exists.")
             else:
-                user = User(first_name=form.first_name.data.strip(), last_name=form.last_name.data.strip(), email=email)
+                user = User(
+                    first_name=form.first_name.data.strip(),
+                    last_name=form.last_name.data.strip(),
+                    email=email,
+                    date_of_birth=form.date_of_birth.data,
+                )
                 user.set_password(form.password.data)
                 db.session.add(user)
                 db.session.commit()
@@ -119,7 +142,71 @@ def register():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html", logout_form=LogoutForm())
+    return render_template("dashboard.html", logout_form=LogoutForm(), profile=g.user.profile)
+
+
+@app.route("/profile")
+@login_required
+def profile():
+    if g.user.profile is None or g.user.date_of_birth is None:
+        flash("Complete your profile so Friendly can help you find your community.", "info")
+        return redirect(url_for("edit_profile"))
+    return render_template("profile.html", profile=g.user.profile, gender_labels=dict(GENDER_CHOICES))
+
+
+@app.route("/profile/edit", methods=["GET", "POST"])
+@login_required
+def edit_profile():
+    profile_record = g.user.profile
+    form = ProfileForm(obj=profile_record)
+    configure_profile_choices(form)
+
+    if request.method == "GET":
+        form.date_of_birth.data = g.user.date_of_birth
+        if profile_record:
+            form.languages.data = [item.id for item in profile_record.languages]
+            form.interests.data = [item.id for item in profile_record.interests]
+            form.connection_intents.data = [item.id for item in profile_record.connection_intents]
+
+    if form.validate_on_submit():
+        try:
+            if profile_record is None:
+                # The unique user_id constraint is the final guard against duplicates.
+                profile_record = Profile(user=g.user)
+                db.session.add(profile_record)
+
+            g.user.date_of_birth = form.date_of_birth.data
+            profile_record.gender = form.gender.data
+            profile_record.gender_description = (
+                form.gender_description.data if form.gender.data == "self_described" else None
+            )
+            profile_record.bio = form.bio.data or None
+            profile_record.home_country_code = form.home_country_code.data
+            profile_record.home_city = form.home_city.data
+            profile_record.discovery_country_code = form.discovery_country_code.data
+            profile_record.discovery_city = form.discovery_city.data
+            profile_record.open_to_connections = form.open_to_connections.data
+            profile_record.languages = selected_records(Language, form.languages.data)
+            profile_record.interests = selected_records(Interest, form.interests.data)
+            profile_record.connection_intents = selected_records(ConnectionIntent, form.connection_intents.data)
+            db.session.commit()
+            flash("Your profile has been saved.", "success")
+            return redirect(url_for("profile"))
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception("Profile update failed because of a database error.")
+            flash("We couldn't save your profile right now. Please try again.", "error")
+
+    grouped_interests = {}
+    for identifier, label in form.interests.choices:
+        interest = db.session.get(Interest, identifier)
+        grouped_interests.setdefault(interest.category, []).append((identifier, label))
+    return render_template(
+        "profile_form.html",
+        form=form,
+        profile=profile_record,
+        grouped_interests=grouped_interests,
+    )
 
 
 @app.route("/logout", methods=["POST"])
@@ -132,6 +219,24 @@ def logout():
         return redirect(url_for("login"))
 
     return redirect(url_for("dashboard"))
+
+
+@app.cli.command("seed-profile-data")
+def seed_profile_data():
+    """Idempotently populate profile catalogues; never runs during app startup."""
+    for name, code in LANGUAGES:
+        if db.session.scalar(db.select(Language).where(Language.code == code)) is None:
+            db.session.add(Language(name=name, code=code))
+    for category, names in INTERESTS.items():
+        for name in names:
+            slug = slugify_interest(name)
+            if db.session.scalar(db.select(Interest).where(Interest.slug == slug)) is None:
+                db.session.add(Interest(name=name, slug=slug, category=category))
+    for name, slug in CONNECTION_INTENTS:
+        if db.session.scalar(db.select(ConnectionIntent).where(ConnectionIntent.slug == slug)) is None:
+            db.session.add(ConnectionIntent(name=name, slug=slug))
+    db.session.commit()
+    print("Profile data is ready.")
 
 
 if __name__ == "__main__":
