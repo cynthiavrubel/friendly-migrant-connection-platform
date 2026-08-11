@@ -1,6 +1,6 @@
 """Database models for Friendly."""
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -8,6 +8,24 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 # The unbound extension avoids importing the Flask app into the model module.
 db = SQLAlchemy()
+
+profile_languages = db.Table(
+    "profile_languages",
+    db.Column("profile_id", db.Integer, db.ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("language_id", db.Integer, db.ForeignKey("languages.id", ondelete="CASCADE"), primary_key=True),
+)
+
+profile_interests = db.Table(
+    "profile_interests",
+    db.Column("profile_id", db.Integer, db.ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("interest_id", db.Integer, db.ForeignKey("interests.id", ondelete="CASCADE"), primary_key=True),
+)
+
+profile_connection_intents = db.Table(
+    "profile_connection_intents",
+    db.Column("profile_id", db.Integer, db.ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("connection_intent_id", db.Integer, db.ForeignKey("connection_intents.id", ondelete="CASCADE"), primary_key=True),
+)
 
 
 class User(db.Model):
@@ -20,11 +38,24 @@ class User(db.Model):
     last_name = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(255), unique=True, index=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
+    # Nullable in the staged migration so existing accounts remain valid.
+    date_of_birth = db.Column(db.Date, nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    profile = db.relationship("Profile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+
+    @property
+    def age(self):
+        """Return exact current age without persisting derived personal data."""
+        if self.date_of_birth is None:
+            return None
+        today = date.today()
+        return today.year - self.date_of_birth.year - (
+            (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+        )
 
     def set_password(self, password: str) -> None:
         """Hash and store a password; plaintext is never persisted."""
@@ -33,3 +64,48 @@ class User(db.Model):
     def check_password(self, password: str) -> bool:
         """Return whether a plaintext candidate matches the stored hash."""
         return check_password_hash(self.password_hash, password)
+
+
+class Profile(db.Model):
+    """A member's public connection profile and private location context."""
+
+    __tablename__ = "profiles"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    gender = db.Column(db.String(24), nullable=False)
+    gender_description = db.Column(db.String(50))
+    bio = db.Column(db.String(500))
+    home_country_code = db.Column(db.String(2), nullable=False)
+    home_city = db.Column(db.String(100), nullable=False)
+    discovery_country_code = db.Column(db.String(2), nullable=False)
+    discovery_city = db.Column(db.String(100), nullable=False)
+    open_to_connections = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+
+    user = db.relationship("User", back_populates="profile")
+    languages = db.relationship("Language", secondary=profile_languages, lazy="selectin")
+    interests = db.relationship("Interest", secondary=profile_interests, lazy="selectin")
+    connection_intents = db.relationship("ConnectionIntent", secondary=profile_connection_intents, lazy="selectin")
+
+
+class Language(db.Model):
+    __tablename__ = "languages"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    code = db.Column(db.String(12), unique=True, nullable=False)
+
+
+class Interest(db.Model):
+    __tablename__ = "interests"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    slug = db.Column(db.String(100), unique=True, nullable=False)
+    category = db.Column(db.String(40), nullable=False, index=True)
+
+
+class ConnectionIntent(db.Model):
+    __tablename__ = "connection_intents"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(120), unique=True, nullable=False)

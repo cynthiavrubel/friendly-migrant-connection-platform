@@ -23,7 +23,13 @@
             {% endwith %}
             <p class="auth-eyebrow">You're signed in</p>
             <h1 id="dashboard-heading">Welcome to Friendly, {{ current_user.first_name }}</h1>
-            <p class="dashboard-copy">Your account is ready. Profile creation and community recommendations are coming next.</p>
+            {% if profile and current_user.date_of_birth %}
+                <p class="dashboard-copy">Your profile is ready. Keep it current so future recommendations reflect where and how you want to connect.</p>
+                <div class="dashboard-actions"><a class="submit-button action-link" href="{{ url_for('profile') }}">View profile</a><a class="secondary-action" href="{{ url_for('edit_profile') }}">Edit profile</a></div>
+            {% else %}
+                <p class="dashboard-copy">Complete your profile so Friendly can later recommend people and Community Plans that fit you.</p>
+                <a class="submit-button action-link" href="{{ url_for('edit_profile') }}">Complete your profile</a>
+            {% endif %}
             <form method="post" action="{{ url_for('logout') }}">
                 {{ logout_form.hidden_tag() }}
                 {{ logout_form.submit(class="submit-button logout-button") }}

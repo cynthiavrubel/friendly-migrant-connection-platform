@@ -12,6 +12,9 @@ load_dotenv(override=True)
 
 def build_database_uri() -> str:
     """Build a safely escaped MySQL connection URI for SQLAlchemy."""
+    # An explicit URL supports isolated test/CI databases without changing MySQL defaults.
+    if os.getenv("DATABASE_URL"):
+        return os.environ["DATABASE_URL"]
     database_url = URL.create(
         drivername="mysql+pymysql",
         username=os.getenv("DB_USER", "friendly_user"),

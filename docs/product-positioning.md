@@ -1,40 +1,77 @@
 # Product Positioning
 
-## Who Is Friendly For?
+## Core positioning
 
-Friendly is designed for newcomers and international residents in Ireland who want to build a local social circle.
+Friendly helps newcomers, international residents, locals and travellers build meaningful local connections across Europe through shared languages, interests and Community Plans.
 
-## What Problem Does Friendly Solve?
+Friendly is Europe-first and global-ready. Ireland is the product's origin story, not its geographic boundary.
 
-Moving to a new country can lead to loneliness and difficulty meeting people.
+## Who Friendly is for
 
-Newcomers may not know where to find people who share their language, cultural background, interests or experience of starting again in a new country.
+Friendly should support people who:
 
-## How Does Friendly Solve the Problem?
+- live permanently in a city;
+- recently relocated;
+- are visiting temporarily;
+- are travelling soon and want to understand a destination socially;
+- want to meet people in another European country or city;
+- want connections grounded in shared language, culture or interests;
+- want to create or join casual local plans;
+- are local residents open to welcoming newcomers.
 
-Friendly recommends relevant people based on:
+## The problem
 
-- Shared interests
-- Shared languages
-- City
-- Relocation stage
-- Willingness to support newcomers
+Relocation and travel can both be socially isolating. Existing social networks often depend on established relationships, while event platforms focus on formal listings rather than helping a person find a comfortable way to join in.
 
-It also provides community meetups designed for people who are open to forming new friendships.
+People need a safe, understandable way to discover others who are open to connection in the place they care about now—not necessarily only where they permanently live.
 
-## What Makes Friendly Different?
+## The Friendly approach
 
-Friendly is not designed for endless social media scrolling.
+Friendly combines:
 
-It focuses specifically on:
+- a home location describing where someone normally lives;
+- an active discovery location describing where they want to find people and plans;
+- voluntary languages and interests;
+- a connection intention or relocation/travel status;
+- an explicit choice to be open to connection;
+- user-created Community Plans that turn online discovery into real local activity.
 
-- Newcomer integration
-- Meaningful local friendships
-- Linguistic and cultural comfort
-- Transparent recommendations
-- Welcoming community meetups
-- People who are actively looking to build a new social circle
+## Location model
 
-## Current Value Proposition
+Home location and active discovery location are separate concepts. Both use a country and city.
 
-Friendly helps newcomers in Ireland feel less alone by connecting them with people who share their languages, interests, location and desire to build new friendships.
+Example:
+
+- Home location: Cork, Ireland
+- Active discovery location: Milan, Italy
+
+The active discovery location may change before or during a trip without rewriting the user's home location. Future versions may add optional availability dates and time-zone-aware scheduling.
+
+Friendly does not require live GPS and must not expose private addresses.
+
+## Connection intentions
+
+Initial supported intentions should include:
+
+- Living here
+- Recently relocated
+- Visiting
+- Travelling soon
+- Local resident
+- Open to welcoming newcomers
+
+The final data model must clarify whether one user can select multiple simultaneous intentions.
+
+## Community Plans
+
+A Community Plan is a user-created invitation to share a local activity. Examples include watching a film, having coffee, visiting a museum, walking, hiking, attending a cultural activity or playing board games.
+
+This language is intentionally broader and more human than formal “events” or platform-organized “meetups.” Friendly facilitates the invitation; users create the plan.
+
+## What makes Friendly different
+
+- Local discovery is intentional and location-led.
+- Recommendations explain shared context rather than presenting opaque scores.
+- Community Plans provide a practical, low-pressure reason to meet.
+- The product supports locals and travellers as well as newcomers.
+- The experience is designed around belonging, not follower counts or endless feeds.

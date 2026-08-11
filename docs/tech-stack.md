@@ -2,49 +2,57 @@
 
 ## Backend
 
-- Python
+- Python 3
 - Flask
+- Flask-SQLAlchemy
+- Flask-Migrate and Alembic
+- Flask-WTF and WTForms
+- Werkzeug password hashing
+- python-dotenv
 
 ## Database
 
 - MySQL
+- PyMySQL
+
+MySQL stores normalized account, profile, location, language, interest and future Community Plan data. Flask-Migrate provides controlled, reviewable schema changes.
 
 ## Frontend
 
-- HTML
-- CSS
-- Bootstrap
-- JavaScript
+- Semantic HTML5
+- Jinja templates
+- Modern plain CSS
+- Minimal vanilla JavaScript
+- Inter with system-font fallbacks
 
-## Version Control
+Friendly deliberately avoids a frontend framework and build system at the current scale. Bootstrap, React, Vue, Tailwind, Node.js and npm are not part of the application stack.
 
-- Git
-- GitHub
+## Development workflow
 
----
+- Git and GitHub for version control
+- Python virtual environment
+- Environment variables for local secrets and database configuration
+- Flask CLI for development and data-seeding commands
 
-## Why These Technologies?
-
-### Python
-
-Easy to read, beginner-friendly, and widely used in backend development.
+## Why this stack
 
 ### Flask
 
-A lightweight Python web framework that allows rapid development while keeping the project easy to understand.
+Flask supports a focused server-rendered architecture with explicit routing, validation and authorization. It keeps the MVP understandable while leaving room for APIs or additional clients later.
 
-### MySQL
+### MySQL and SQLAlchemy
 
-A relational database management system used to store application data securely.
+The product requires relational integrity across users, locations, languages, interests, Community Plans and participants. SQLAlchemy provides expressive models while MySQL supplies durable relational storage.
 
-### HTML & CSS
+### Server-rendered HTML and plain CSS
 
-Used to build and style the user interface.
+This approach provides fast pages, accessible forms and responsive interfaces without unnecessary client-side complexity. JavaScript is introduced only for interactions that genuinely require it.
 
-### Bootstrap
+## Europe-first technical considerations
 
-Provides responsive layouts and reusable UI components.
-
-### Git & GitHub
-
-Used for version control and collaboration.
+- Store country and city separately.
+- Use standardized country identifiers.
+- Store plan timestamps consistently and render them in the appropriate location time zone.
+- Keep text encoding at `utf8mb4` for multilingual names and content.
+- Avoid architecture tied to Irish cities, one national locale or a single time zone.
+- Do not require live GPS or private street addresses for discovery.

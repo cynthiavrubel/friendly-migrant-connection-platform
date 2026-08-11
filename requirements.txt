@@ -15,6 +15,7 @@ Jinja2==3.1.6
 Mako==1.4.1
 MarkupSafe==3.0.3
 PyMySQL==1.2.0
+pycountry==24.6.1
 python-dotenv==1.2.2
 SQLAlchemy==2.0.51
 typing_extensions==4.16.0
