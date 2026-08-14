@@ -28,8 +28,34 @@
                 <p>Help us understand the people, places and experiences that matter to you.</p>
             </div>
             {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-list" aria-live="polite">{% for category, message in messages %}<p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>{% endfor %}</div>{% endif %}{% endwith %}
-            <form id="profile-form" method="post" novalidate>
+            <form id="profile-form" method="post" enctype="multipart/form-data" novalidate>
                 {{ form.hidden_tag() }}
+                <fieldset class="form-section photo-section">
+                    <legend>Profile photo</legend>
+                    <p class="section-help">Add a clear photo of yourself, up to 5 MB. Most common photo formats are supported.</p>
+                    <div class="photo-editor">
+                        <div class="profile-photo-preview-wrap" data-photo-preview data-initial="{{ current_user.first_name[0]|upper }}" data-persisted-src="{{ url_for('profile_photo', key=profile.profile_photo_key) if profile and profile.profile_photo_key else '' }}">
+                            {% if profile and profile.profile_photo_key %}<img class="profile-photo-preview" src="{{ url_for('profile_photo', key=profile.profile_photo_key) }}" alt="Current profile photo for {{ current_user.first_name }}">{% else %}<span class="profile-photo-preview profile-photo-initials" aria-hidden="true">{{ current_user.first_name[0]|upper }}</span>{% endif %}
+                        </div>
+                        <div class="photo-input-wrap">
+                            <label for="{{ form.profile_photo.id }}">{{ 'Replace photo' if profile and profile.profile_photo_key else 'Choose a photo' }}</label>
+                            {{ form.profile_photo(accept="image/*", aria_describedby="photo-help photo-errors" if form.profile_photo.errors else "photo-help", aria_invalid="true" if form.profile_photo.errors else "false") }}
+                            <p class="field-help" id="photo-help">Large images are resized securely. Selecting no file keeps your current photo.</p>
+                            {% if form.profile_photo.errors %}<ul class="field-errors" id="photo-errors">{% for error in form.profile_photo.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
+                        </div>
+                    </div>
+                    <div class="crop-editor" data-crop-editor hidden>
+                        <p class="crop-instructions" id="crop-instructions">Drag the photo to reposition it. Use the slider to zoom.</p>
+                        <div class="crop-viewport" data-crop-viewport role="img" tabindex="0" aria-label="Circular preview of your final profile photo" aria-describedby="crop-instructions">
+                            <img data-crop-image alt="Selected photo crop preview" draggable="false">
+                        </div>
+                        <div class="crop-controls">
+                            <label for="photo-zoom">Zoom</label>
+                            <div class="zoom-control"><span aria-hidden="true">−</span><input id="photo-zoom" data-crop-zoom type="range" min="1" max="4" step="0.01" value="1"><span aria-hidden="true">+</span></div>
+                            <button class="reset-crop-button" data-crop-reset type="button">Reset photo position</button>
+                        </div>
+                    </div>
+                </fieldset>
                 <fieldset class="form-section">
                     <legend>About you</legend>
                     <p class="section-help">Your full date of birth stays private. Only your calculated age appears on your profile.</p>
@@ -69,6 +95,13 @@
                 </fieldset>
                 <div class="form-actions">{{ form.submit(class="submit-button") }}{% if profile %}<a href="{{ url_for('profile') }}">Cancel</a>{% endif %}</div>
             </form>
+            {% if profile and profile.profile_photo_key %}
+                <form class="remove-photo-form" method="post" action="{{ url_for('remove_profile_photo') }}">
+                    {{ remove_photo_form.hidden_tag() }}
+                    <p>Removing your photo will make your profile incomplete.</p>
+                    {{ remove_photo_form.submit(class="remove-photo-button", onclick="return confirm('Remove your profile photo?')") }}
+                </form>
+            {% endif %}
         </section>
     </main>
 </body>

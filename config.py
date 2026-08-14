@@ -2,6 +2,7 @@
 
 import os
 from datetime import timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL
@@ -34,6 +35,12 @@ class Config:
     SQLALCHEMY_DATABASE_URI = build_database_uri()
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
+    PROFILE_UPLOAD_FOLDER = Path(__file__).resolve().parent / "instance" / "uploads" / "profile_photos"
+    # Development uses local storage; production can select a future backend here.
+    PROFILE_PHOTO_STORAGE_BACKEND = os.getenv("PROFILE_PHOTO_STORAGE_BACKEND", "local")
+    MAX_PROFILE_PHOTO_SIZE = 5 * 1024 * 1024
+    # Allow multipart overhead while enforcing the exact file limit separately.
+    MAX_CONTENT_LENGTH = 6 * 1024 * 1024
 
 
 class DevelopmentConfig(Config):

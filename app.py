@@ -2,15 +2,17 @@ from datetime import datetime
 from functools import wraps
 from urllib.parse import unquote, urlsplit
 
-from flask import Flask, flash, g, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 
 from config import DevelopmentConfig
-from forms import LoginForm, LogoutForm, ProfileForm, RegistrationForm
+from forms import LoginForm, LogoutForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
 from models import ConnectionIntent, Interest, Language, Profile, User, db
 from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
+from profile_photo_storage import PROFILE_PHOTO_KEY_PATTERN, build_profile_photo_storage
+from profile_photos import ProfilePhotoError, generate_profile_photo_key, process_profile_photo
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -19,6 +21,15 @@ app.config.from_object(DevelopmentConfig)
 db.init_app(app)
 migrate = Migrate(app, db)
 csrf = CSRFProtect(app)
+
+
+@app.errorhandler(413)
+def upload_too_large(_error):
+    """Convert oversized multipart requests into safe, friendly feedback."""
+    if g.get("user") is not None:
+        flash("Profile photos must be 5 MB or smaller.", "error")
+        return redirect(url_for("edit_profile"))
+    return "The uploaded file is too large.", 413
 
 
 @app.before_request
@@ -77,6 +88,19 @@ def login_required(view):
         if g.user is None:
             flash("Please log in to continue.", "info")
             return redirect(url_for("login", next=request.full_path.rstrip("?")))
+        return view(*args, **kwargs)
+
+    return wrapped_view
+
+
+def profile_complete_required(view):
+    """Reusable Sprint 6 gate for features that require a complete profile."""
+    @login_required
+    @wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if g.user.profile is None or not g.user.profile.is_complete:
+            flash("Complete your profile before continuing.", "info")
+            return redirect(url_for("edit_profile"))
         return view(*args, **kwargs)
 
     return wrapped_view
@@ -142,7 +166,11 @@ def register():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html", logout_form=LogoutForm(), profile=g.user.profile)
+    return render_template(
+        "dashboard.html",
+        logout_form=LogoutForm(),
+        profile=g.user.profile,
+    )
 
 
 @app.route("/profile")
@@ -151,7 +179,34 @@ def profile():
     if g.user.profile is None or g.user.date_of_birth is None:
         flash("Complete your profile so Friendly can help you find your community.", "info")
         return redirect(url_for("edit_profile"))
-    return render_template("profile.html", profile=g.user.profile, gender_labels=dict(GENDER_CHOICES))
+    return render_template(
+        "profile.html",
+        profile=g.user.profile,
+        gender_labels=dict(GENDER_CHOICES),
+    )
+
+
+def profile_photo_storage():
+    """Resolve the configured backend at use time so tests can isolate storage."""
+    return build_profile_photo_storage(app.config)
+
+
+@app.route("/profile/photo/<path:key>")
+def profile_photo(key):
+    """Deliver only safe object keys currently attached to legitimate profiles."""
+    if not PROFILE_PHOTO_KEY_PATTERN.fullmatch(key):
+        abort(404)
+    exists = db.session.scalar(db.select(Profile.id).where(Profile.profile_photo_key == key))
+    if exists is None:
+        abort(404)
+    storage = profile_photo_storage()
+    if not storage.exists(key):
+        abort(404)
+    try:
+        stored_photo = storage.open(key)
+    except OSError:
+        abort(404)
+    return send_file(stored_photo, mimetype="image/webp", max_age=31536000, download_name="profile.webp")
 
 
 @app.route("/profile/edit", methods=["GET", "POST"])
@@ -169,7 +224,25 @@ def edit_profile():
             form.connection_intents.data = [item.id for item in profile_record.connection_intents]
 
     if form.validate_on_submit():
+        new_photo_key = None
+        old_photo_key = profile_record.profile_photo_key if profile_record else None
+        storage = profile_photo_storage()
         try:
+            if form.profile_photo.data and form.profile_photo.data.filename:
+                processed_photo = process_profile_photo(
+                    form.profile_photo.data,
+                    app.config["MAX_PROFILE_PHOTO_SIZE"],
+                    {
+                        "x": form.photo_crop_x.data,
+                        "y": form.photo_crop_y.data,
+                        "zoom": form.photo_crop_zoom.data,
+                    },
+                )
+                new_photo_key = generate_profile_photo_key()
+                try:
+                    storage.save(new_photo_key, processed_photo)
+                except OSError:
+                    raise ProfilePhotoError("We couldn't save that photo right now. Please try again.") from None
             if profile_record is None:
                 # The unique user_id constraint is the final guard against duplicates.
                 profile_record = Profile(user=g.user)
@@ -186,14 +259,24 @@ def edit_profile():
             profile_record.discovery_country_code = form.discovery_country_code.data
             profile_record.discovery_city = form.discovery_city.data
             profile_record.open_to_connections = form.open_to_connections.data
+            if new_photo_key:
+                profile_record.profile_photo_key = new_photo_key
             profile_record.languages = selected_records(Language, form.languages.data)
             profile_record.interests = selected_records(Interest, form.interests.data)
             profile_record.connection_intents = selected_records(ConnectionIntent, form.connection_intents.data)
             db.session.commit()
+            if new_photo_key and old_photo_key and not storage.delete(old_photo_key):
+                app.logger.warning("Old profile photo could not be removed: %s", old_photo_key)
             flash("Your profile has been saved.", "success")
             return redirect(url_for("profile"))
+        except ProfilePhotoError as error:
+            if new_photo_key:
+                storage.delete(new_photo_key)
+            form.profile_photo.errors = [*form.profile_photo.errors, str(error)]
         except SQLAlchemyError:
             db.session.rollback()
+            if new_photo_key:
+                storage.delete(new_photo_key)
             app.logger.exception("Profile update failed because of a database error.")
             flash("We couldn't save your profile right now. Please try again.", "error")
 
@@ -206,7 +289,36 @@ def edit_profile():
         form=form,
         profile=profile_record,
         grouped_interests=grouped_interests,
+        remove_photo_form=RemoveProfilePhotoForm(),
     )
+
+
+@app.route("/profile/photo/remove", methods=["POST"])
+@login_required
+def remove_profile_photo():
+    """Deliberately detach and delete the signed-in user's profile photo."""
+    form = RemoveProfilePhotoForm()
+    if not form.validate_on_submit():
+        abort(400)
+    profile_record = g.user.profile
+    if profile_record is None or not profile_record.profile_photo_key:
+        flash("There is no profile photo to remove.", "info")
+        return redirect(url_for("edit_profile"))
+
+    key = profile_record.profile_photo_key
+    try:
+        profile_record.profile_photo_key = None
+        db.session.commit()
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Profile photo removal failed because of a database error.")
+        flash("We couldn't remove your photo right now. Please try again.", "error")
+        return redirect(url_for("edit_profile"))
+
+    if not profile_photo_storage().delete(key):
+        app.logger.warning("Detached profile photo could not be deleted: %s", key)
+    flash("Your profile photo has been removed.", "success")
+    return redirect(url_for("edit_profile"))
 
 
 @app.route("/logout", methods=["POST"])
