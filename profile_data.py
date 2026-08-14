@@ -32,15 +32,61 @@ def country_name(code):
     return country.name if country else code
 
 
-LANGUAGES = (
-    ("English", "en"), ("Ukrainian", "uk"), ("Irish", "ga"), ("Polish", "pl"),
-    ("Spanish", "es"), ("French", "fr"), ("German", "de"), ("Italian", "it"),
-    ("Portuguese", "pt"), ("Romanian", "ro"), ("Dutch", "nl"), ("Czech", "cs"),
-    ("Slovak", "sk"), ("Hungarian", "hu"), ("Greek", "el"), ("Bulgarian", "bg"),
-    ("Croatian", "hr"), ("Serbian", "sr"), ("Lithuanian", "lt"), ("Latvian", "lv"),
-    ("Estonian", "et"), ("Swedish", "sv"), ("Norwegian", "no"), ("Danish", "da"),
-    ("Finnish", "fi"), ("Turkish", "tr"), ("Arabic", "ar"),
+# ISO 639-1 gives Friendly broad modern coverage without exposing pycountry's
+# thousands of historical, local, bibliographic and technical ISO 639-3 rows.
+# These entries are historical/liturgical or constructed rather than practical
+# spoken-language choices for this product.
+EXCLUDED_LANGUAGE_CODES = {
+    "ae",  # Avestan
+    "cu",  # Church Slavic
+    "eo",  # Esperanto
+    "ia",  # Interlingua
+    "ie",  # Interlingue
+    "io",  # Ido
+    "la",  # Latin
+    "pi",  # Pali
+    "sa",  # Sanskrit
+    "vo",  # Volapuk
+    "zh",  # Replaced by clear Mandarin and Cantonese choices below.
+}
+
+LANGUAGE_NAME_OVERRIDES = {
+    "el": "Greek",
+    "fa": "Persian (Farsi)",
+    "ht": "Haitian Creole",
+    "ky": "Kyrgyz",
+    "ms": "Malay",
+    "my": "Burmese (Myanmar)",
+    "ne": "Nepali",
+    "ny": "Chichewa",
+    "or": "Odia",
+    "pa": "Punjabi",
+    "ps": "Pashto",
+    "sw": "Swahili",
+    "tl": "Filipino (Tagalog)",
+    "ug": "Uyghur",
+}
+
+ADDITIONAL_SPOKEN_LANGUAGES = (
+    ("Mandarin Chinese", "cmn"),
+    ("Cantonese", "yue"),
 )
+
+
+def language_catalogue():
+    """Return practical global spoken languages backed by stable ISO codes."""
+    languages = []
+    for language in pycountry.languages:
+        code = getattr(language, "alpha_2", None)
+        if not code or code in EXCLUDED_LANGUAGE_CODES:
+            continue
+        name = LANGUAGE_NAME_OVERRIDES.get(code, language.name)
+        languages.append((name, code))
+    languages.extend(ADDITIONAL_SPOKEN_LANGUAGES)
+    return tuple(sorted(languages, key=lambda item: item[0].casefold()))
+
+
+LANGUAGES = language_catalogue()
 
 INTERESTS = {
     "Social": ("Coffee", "Restaurants", "Nightlife", "Board games", "Trivia"),
