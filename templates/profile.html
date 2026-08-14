@@ -5,11 +5,11 @@
     <meta name="description" content="Your Friendly profile."><title>{{ current_user.first_name }} | Friendly</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
 </head>
 <body>
-    <header class="auth-header profile-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><a class="header-link" href="{{ url_for('dashboard') }}">Dashboard</a></header>
-    <main class="profile-view-main">
+    <header class="auth-header app-header profile-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><nav class="app-nav" aria-label="Account"><a href="{{ url_for('dashboard') }}">Dashboard</a>{% if profile.is_complete %}<a href="{{ url_for('discover') }}">Discover</a>{% endif %}</nav></header>
+    <main class="profile-view-main friendly-container">
         {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-list profile-flashes" aria-live="polite">{% for category, message in messages %}<p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>{% endfor %}</div>{% endif %}{% endwith %}
         {% if not profile.is_complete %}<aside class="completion-notice"><div><strong>Profile {{ profile.completion_percentage }}% complete</strong><span>Add {{ profile.missing_completion_items|join(', ') }} to complete it.</span></div><a href="{{ url_for('edit_profile') }}">Complete profile</a></aside>{% endif %}
         <article class="public-profile">

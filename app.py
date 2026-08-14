@@ -1,6 +1,6 @@
 from datetime import datetime
 from functools import wraps
-from urllib.parse import unquote, urlsplit
+from urllib.parse import unquote, urlencode, urlsplit
 
 from flask import Flask, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from flask_migrate import Migrate
@@ -8,6 +8,7 @@ from flask_wtf.csrf import CSRFProtect
 from sqlalchemy.exc import SQLAlchemyError
 
 from config import DevelopmentConfig
+from discovery import discover_profiles, parse_filters, public_profile
 from forms import LoginForm, LogoutForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
 from models import ConnectionIntent, Interest, Language, Profile, User, db
 from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
@@ -170,6 +171,58 @@ def dashboard():
         "dashboard.html",
         logout_form=LogoutForm(),
         profile=g.user.profile,
+    )
+
+
+@app.route("/discover")
+@profile_complete_required
+def discover():
+    """Show a filtered, transparently ranked page of eligible local people."""
+    languages = list(db.session.scalars(db.select(Language).order_by(Language.name)))
+    interests = list(db.session.scalars(db.select(Interest).order_by(Interest.category, Interest.name)))
+    intentions = list(db.session.scalars(db.select(ConnectionIntent).order_by(ConnectionIntent.id)))
+    catalogues = {
+        "languages": {item.id for item in languages},
+        "interests": {item.id for item in interests},
+        "intentions": {item.id for item in intentions},
+    }
+    gender_options = dict(GENDER_CHOICES)
+    filters = parse_filters(request.args, catalogues, set(gender_options))
+    try:
+        requested_page = max(1, int(request.args.get("page", 1)))
+    except (TypeError, ValueError):
+        requested_page = 1
+    results = discover_profiles(db.session, g.user.profile, filters, requested_page)
+
+    def page_url(number):
+        query = [*filters.query_items(), ("page", number)]
+        return f"{url_for('discover')}?{urlencode(query)}"
+
+    return render_template(
+        "discover.html",
+        results=results,
+        filters=filters,
+        languages=languages,
+        interests=interests,
+        intentions=intentions,
+        gender_options=gender_options,
+        page_url=page_url,
+    )
+
+
+@app.route("/people/<int:user_id>")
+@login_required
+def person_profile(user_id):
+    """Render only another member's deliberately public profile fields."""
+    if user_id == g.user.id:
+        return redirect(url_for("profile"))
+    profile_record = public_profile(db.session, user_id)
+    if profile_record is None:
+        abort(404)
+    return render_template(
+        "person_profile.html",
+        profile=profile_record,
+        gender_labels=dict(GENDER_CHOICES),
     )
 
 

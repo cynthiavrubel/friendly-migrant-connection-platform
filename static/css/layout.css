@@ -1,0 +1,53 @@
+/* Friendly responsive layout contract
+   Mobile: <=480px | Small/tablet: 481-767px | Tablet: 768-1023px | Desktop: >=1024px */
+:root {
+    --page-gutter:clamp(16px,3vw,40px);
+    --content-max:920px;
+    --content-wide:1200px;
+    --card-radius:18px;
+    --card-padding:clamp(20px,4vw,40px);
+    --section-gap:clamp(48px,7vw,88px);
+    --control-height:48px;
+}
+
+*,*::before,*::after { box-sizing:border-box; }
+html,body { width:100%; max-width:100%; margin:0; }
+img,video,canvas { max-width:100%; height:auto; }
+svg { max-width:100%; }
+input,select,textarea,button { max-width:100%; font:inherit; }
+
+/* New pages should begin with these fluid, shrink-safe primitives. */
+.friendly-container { width:min(calc(100% - (2 * var(--page-gutter))),var(--content-max)); margin-inline:auto; }
+.friendly-container--wide { --content-max:var(--content-wide); }
+.friendly-card { width:100%; min-width:0; padding:var(--card-padding); border-radius:var(--card-radius); }
+.friendly-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr)); gap:clamp(16px,2vw,28px); }
+.friendly-stack { min-width:0; display:grid; gap:clamp(16px,2vw,24px); }
+.friendly-chip-list { min-width:0; display:flex; flex-wrap:wrap; gap:8px; }
+.friendly-chip-list>* { max-width:100%; overflow-wrap:anywhere; }
+
+/* Flex and grid content must be allowed to shrink around long user content. */
+.friendly-container>*,.friendly-grid>*,.friendly-stack>*,.app-header>*,.app-nav>* { min-width:0; }
+
+/* Shared authenticated header: compact first row, intentional wrapped nav on mobile. */
+.auth-header.app-header { width:min(calc(100% - (2 * var(--page-gutter))),var(--content-wide)); display:flex; align-items:center; justify-content:space-between; gap:16px; margin-inline:auto; padding-block:20px; }
+.app-nav { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:10px 22px; }
+.app-nav a { color:var(--auth-primary); font-size:.79rem; font-weight:650; text-underline-offset:4px; white-space:normal; }
+
+/* Shared control and wrapping safeguards. */
+.responsive-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.responsive-form-grid>* { min-width:0; }
+.responsive-control { width:100%; min-width:0; min-height:var(--control-height); }
+
+@media (max-width:767px) {
+    :root { --page-gutter:clamp(16px,4vw,24px); --card-padding:clamp(18px,5vw,28px); }
+    .responsive-form-grid { grid-template-columns:minmax(0,1fr); }
+}
+
+@media (max-width:480px) {
+    :root { --page-gutter:clamp(14px,4.25vw,18px); --card-radius:16px; }
+    .auth-header.app-header { align-items:flex-start; flex-wrap:wrap; gap:12px; padding-block:16px; }
+    .app-header .auth-brand { flex:0 0 auto; gap:8px; font-size:1.02rem; }
+    .app-header .auth-brand svg { width:32px; height:32px; }
+    .app-nav { width:100%; justify-content:flex-start; gap:8px 18px; padding-top:11px; border-top:1px solid rgba(220,228,223,.85); }
+    .app-nav a { font-size:.74rem; }
+}
