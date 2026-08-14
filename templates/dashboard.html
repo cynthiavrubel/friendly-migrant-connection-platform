@@ -22,13 +22,16 @@
                 {% if messages %}<div class="flash-list" aria-live="polite">{% for category, message in messages %}<p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>{% endfor %}</div>{% endif %}
             {% endwith %}
             <p class="auth-eyebrow">You're signed in</p>
+            {% if profile and profile.profile_photo_key %}<img class="dashboard-avatar" src="{{ url_for('profile_photo', key=profile.profile_photo_key) }}" alt="Profile photo of {{ current_user.first_name }}">{% endif %}
             <h1 id="dashboard-heading">Welcome to Friendly, {{ current_user.first_name }}</h1>
-            {% if profile and current_user.date_of_birth %}
+            {% if profile and profile.is_complete %}
+                <p class="profile-completion-label is-complete">Profile complete</p>
                 <p class="dashboard-copy">Your profile is ready. Keep it current so future recommendations reflect where and how you want to connect.</p>
                 <div class="dashboard-actions"><a class="submit-button action-link" href="{{ url_for('profile') }}">View profile</a><a class="secondary-action" href="{{ url_for('edit_profile') }}">Edit profile</a></div>
             {% else %}
-                <p class="dashboard-copy">Complete your profile so Friendly can later recommend people and Community Plans that fit you.</p>
-                <a class="submit-button action-link" href="{{ url_for('edit_profile') }}">Complete your profile</a>
+                <p class="profile-completion-label">Profile {{ profile.completion_percentage if profile else 0 }}% complete</p>
+                <p class="dashboard-copy">{% if profile %}Add {{ profile.missing_completion_items|join(', ') }} to complete your profile.{% else %}Complete your profile so Friendly can later recommend people and Community Plans that fit you.{% endif %}</p>
+                <a class="submit-button action-link" href="{{ url_for('edit_profile') }}">{{ 'Add profile photo' if profile and profile.missing_completion_items == ['a profile photo'] else 'Complete your profile' }}</a>
             {% endif %}
             <form method="post" action="{{ url_for('logout') }}">
                 {{ logout_form.hidden_tag() }}

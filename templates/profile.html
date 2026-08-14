@@ -11,9 +11,10 @@
     <header class="auth-header profile-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><a class="header-link" href="{{ url_for('dashboard') }}">Dashboard</a></header>
     <main class="profile-view-main">
         {% with messages = get_flashed_messages(with_categories=true) %}{% if messages %}<div class="flash-list profile-flashes" aria-live="polite">{% for category, message in messages %}<p class="flash-message flash-{{ category }}" role="alert">{{ message }}</p>{% endfor %}</div>{% endif %}{% endwith %}
+        {% if not profile.is_complete %}<aside class="completion-notice"><div><strong>Profile {{ profile.completion_percentage }}% complete</strong><span>Add {{ profile.missing_completion_items|join(', ') }} to complete it.</span></div><a href="{{ url_for('edit_profile') }}">Complete profile</a></aside>{% endif %}
         <article class="public-profile">
             <header class="public-profile-header">
-                <div class="profile-avatar" aria-hidden="true">{{ current_user.first_name[0]|upper }}</div>
+                {% if profile.profile_photo_key %}<img class="profile-avatar profile-avatar-image" src="{{ url_for('profile_photo', key=profile.profile_photo_key) }}" alt="Profile photo of {{ current_user.first_name }}">{% else %}<div class="profile-avatar" aria-hidden="true">{{ current_user.first_name[0]|upper }}</div>{% endif %}
                 <div><p class="auth-eyebrow">Your Friendly profile</p><h1>{{ current_user.first_name }}, {{ current_user.age }}</h1><p class="profile-location">{{ profile.discovery_city }}, {{ country_name(profile.discovery_country_code) }}</p>{% if profile.gender != 'prefer_not_to_say' %}<p class="profile-gender">{{ profile.gender_description if profile.gender == 'self_described' else gender_labels[profile.gender] }}</p>{% endif %}</div>
                 <span class="availability {{ 'is-open' if profile.open_to_connections else 'is-closed' }}">{{ 'Open to connections' if profile.open_to_connections else 'Not currently open' }}</span>
             </header>

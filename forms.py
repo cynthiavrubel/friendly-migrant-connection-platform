@@ -4,7 +4,8 @@ import re
 from datetime import date
 
 from flask_wtf import FlaskForm
-from wtforms import BooleanField, DateField, PasswordField, SelectField, SelectMultipleField, StringField, SubmitField, TextAreaField
+from flask_wtf.file import FileField
+from wtforms import BooleanField, DateField, HiddenField, PasswordField, SelectField, SelectMultipleField, StringField, SubmitField, TextAreaField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, ValidationError
 
 from profile_data import GENDER_CHOICES, country_choices
@@ -76,6 +77,12 @@ class LogoutForm(FlaskForm):
     submit = SubmitField("Log Out")
 
 
+class RemoveProfilePhotoForm(FlaskForm):
+    """Provide CSRF protection for deliberate profile-photo removal."""
+
+    submit = SubmitField("Remove photo")
+
+
 class ProfileForm(FlaskForm):
     """Validate creation and editing of a complete Friendly profile."""
 
@@ -83,6 +90,10 @@ class ProfileForm(FlaskForm):
     gender = SelectField("Gender", choices=[("", "Choose an option"), *GENDER_CHOICES], validators=[DataRequired()])
     gender_description = StringField("Describe your gender", filters=[strip_whitespace], validators=[Optional(), Length(max=50)])
     bio = TextAreaField("Bio", filters=[strip_whitespace], validators=[Optional(), Length(max=500)])
+    profile_photo = FileField("Profile photo")
+    photo_crop_x = HiddenField(default="0.5")
+    photo_crop_y = HiddenField(default="0.5")
+    photo_crop_zoom = HiddenField(default="1")
     home_country_code = SelectField("Home country", choices=[], validators=[DataRequired()])
     home_city = StringField("Home city", filters=[strip_whitespace], validators=[DataRequired(), Length(min=2, max=100)])
     discovery_country_code = SelectField("Discovery country", choices=[], validators=[DataRequired()])
