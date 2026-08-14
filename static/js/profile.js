@@ -11,6 +11,34 @@ function updateGenderDescription() {
 genderSelect?.addEventListener("change", updateGenderDescription);
 updateGenderDescription();
 
+const languageSelector = document.querySelector("[data-language-selector]");
+const languageSearch = languageSelector?.querySelector("#language-search");
+const languageOptions = [...(languageSelector?.querySelectorAll("[data-language-option]") || [])];
+const languageStatus = languageSelector?.querySelector("[data-language-status]");
+const languageEmpty = languageSelector?.querySelector("[data-language-empty]");
+
+function updateLanguageSelector() {
+    if (!languageSelector) return;
+    const query = languageSearch.value.trim().toLocaleLowerCase();
+    let visibleCount = 0;
+    let selectedCount = 0;
+
+    languageOptions.forEach((option) => {
+        const matches = option.dataset.languageName.includes(query);
+        option.hidden = !matches;
+        visibleCount += Number(matches);
+        selectedCount += Number(option.querySelector("input").checked);
+    });
+
+    languageEmpty.hidden = visibleCount !== 0;
+    const resultLabel = query ? `${visibleCount} result${visibleCount === 1 ? "" : "s"}` : `${visibleCount} languages`;
+    languageStatus.textContent = `${selectedCount} selected · ${resultLabel}`;
+}
+
+languageSearch?.addEventListener("input", updateLanguageSelector);
+languageSelector?.addEventListener("change", updateLanguageSelector);
+updateLanguageSelector();
+
 const photoInput = document.querySelector("#profile_photo");
 const photoPreview = document.querySelector("[data-photo-preview]");
 const cropEditor = document.querySelector("[data-crop-editor]");

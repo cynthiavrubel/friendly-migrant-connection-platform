@@ -4,8 +4,10 @@ import os
 import tempfile
 import unittest
 from datetime import date
+from pathlib import Path
 
 
+ROOT = Path(__file__).resolve().parents[1]
 database_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
 database_file.close()
 os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
@@ -140,7 +142,50 @@ class ProfileFlowTests(unittest.TestCase):
                 db.session.scalar(db.select(db.func.count(ConnectionIntent.id))),
             )
             self.assertEqual(first_counts, second_counts)
-            self.assertEqual(first_counts, (27, 28, 7))
+            self.assertGreaterEqual(first_counts[0], 170)
+            self.assertEqual(first_counts[1:], (28, 7))
+
+    def test_global_language_catalogue_and_unique_codes(self):
+        expected = {
+            "Mandarin Chinese": "cmn", "Cantonese": "yue", "Japanese": "ja",
+            "Korean": "ko", "Hindi": "hi", "Arabic": "ar", "Yoruba": "yo",
+            "Igbo": "ig", "Swahili": "sw",
+        }
+        with app.app_context():
+            languages = {item.name: item.code for item in db.session.scalars(db.select(Language))}
+            for name, code in expected.items():
+                self.assertEqual(languages.get(name), code)
+            total = db.session.scalar(db.select(db.func.count(Language.id)))
+            distinct_codes = db.session.scalar(db.select(db.func.count(db.distinct(Language.code))))
+            self.assertEqual(total, distinct_codes)
+
+    def test_reseed_preserves_profile_language_associations(self):
+        self.authenticated_user()
+        self.client.post("/profile/edit", data=self.valid_profile_data())
+        with app.app_context():
+            profile = db.session.scalar(db.select(Profile))
+            language_ids = {language.id for language in profile.languages}
+            self.assertTrue(language_ids)
+            result = app.test_cli_runner().invoke(args=["seed-profile-data"])
+            self.assertEqual(result.exit_code, 0)
+            db.session.expire_all()
+            profile = db.session.get(Profile, profile.id)
+            self.assertEqual({language.id for language in profile.languages}, language_ids)
+
+    def test_language_search_ui_is_wired_and_edit_selection_is_prepopulated(self):
+        self.authenticated_user()
+        profile_data = self.valid_profile_data()
+        self.client.post("/profile/edit", data=profile_data)
+        response = self.client.get("/profile/edit")
+        self.assertIn(b'id="language-search"', response.data)
+        self.assertIn(b'data-language-options', response.data)
+        self.assertIn(b'data-language-status', response.data)
+        self.assertIn(b'Here...', response.data)
+        for language_id in profile_data["languages"]:
+            self.assertIn(f'value="{language_id}" checked'.encode(), response.data)
+        script = (ROOT / "static" / "js" / "profile.js").read_text(encoding="utf-8")
+        self.assertIn('languageSearch?.addEventListener("input", updateLanguageSelector)', script)
+        self.assertIn('option.hidden = !matches', script)
 
 
 if __name__ == "__main__":

@@ -337,7 +337,23 @@ def logout():
 def seed_profile_data():
     """Idempotently populate profile catalogues; never runs during app startup."""
     for name, code in LANGUAGES:
-        if db.session.scalar(db.select(Language).where(Language.code == code)) is None:
+        existing = db.session.scalar(db.select(Language).where(Language.code == code))
+        if existing is not None:
+            # Normalize labels in place so profile-language associations retain
+            # the same row IDs. Never delete catalogue records during seeding.
+            conflicting_name = db.session.scalar(
+                db.select(Language).where(Language.name == name, Language.id != existing.id)
+            )
+            if conflicting_name is None:
+                existing.name = name
+            continue
+
+        # A legacy row with the desired display name is upgraded in place rather
+        # than duplicated, preserving any profiles already associated with it.
+        existing = db.session.scalar(db.select(Language).where(Language.name == name))
+        if existing is not None:
+            existing.code = code
+        else:
             db.session.add(Language(name=name, code=code))
     for category, names in INTERESTS.items():
         for name in names:

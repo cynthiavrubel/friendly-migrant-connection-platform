@@ -76,8 +76,14 @@
                 </fieldset>
 
                 <fieldset class="form-section choice-section">
-                    <legend>Languages</legend><p class="section-help">Choose at least one.</p>
-                    <div class="choice-grid">{% for value, label in form.languages.choices %}<label class="choice-chip"><input type="checkbox" name="{{ form.languages.name }}" value="{{ value }}"{% if value in (form.languages.data or []) %} checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div>
+                    <legend>Languages</legend><p class="section-help" id="language-help">Choose at least one. Search by language name.</p>
+                    <div class="language-selector" data-language-selector>
+                        <label class="language-search-label" for="language-search">Search languages</label>
+                        <input class="language-search" id="language-search" type="search" placeholder="Here..." autocomplete="off" aria-controls="language-options" aria-describedby="language-help language-status">
+                        <p class="language-status" id="language-status" aria-live="polite" data-language-status></p>
+                        <div class="choice-grid language-options" id="language-options" data-language-options>{% for value, label in form.languages.choices %}<label class="choice-chip" data-language-option data-language-name="{{ label|lower }}"><input type="checkbox" name="{{ form.languages.name }}" value="{{ value }}"{% if value in (form.languages.data or []) %} checked{% endif %}><span>{{ label }}</span></label>{% endfor %}</div>
+                        <p class="language-empty" data-language-empty hidden>No languages match that search.</p>
+                    </div>
                     {% if form.languages.errors %}<ul class="field-errors">{% for error in form.languages.errors %}<li>{{ error }}</li>{% endfor %}</ul>{% endif %}
                 </fieldset>
 
