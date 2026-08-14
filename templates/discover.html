@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Discover people in your Friendly community."><title>Discover people | Friendly</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/discover.css') }}">
+    <script src="{{ url_for('static', filename='js/discover.js') }}" defer></script>
+</head>
+<body>
+    <a class="skip-link" href="#results">Skip to people</a>
+    <header class="auth-header app-header discover-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><nav class="app-nav" aria-label="Account"><a href="{{ url_for('dashboard') }}">Dashboard</a><a href="{{ url_for('profile') }}">My profile</a></nav></header>
+    <main class="discover-main friendly-container friendly-container--wide">
+        <header class="discover-intro"><div><p class="auth-eyebrow">Your local community</p><h1>Discover people in {{ current_user.profile.discovery_city }}</h1><p>Meet people who are open to genuine connections where you want to spend time.</p></div><a href="{{ url_for('edit_profile') }}">Edit discovery location</a></header>
+        <div class="discover-layout">
+            <details class="filter-panel" data-discovery-filters data-active="{{ 'true' if filters.active or filters.errors else 'false' }}" open>
+                <summary class="filter-title"><span id="filter-heading">Filters</span><span class="filter-summary-state">Tap to refine</span></summary>
+                <div class="filter-content">
+                {% if filters.active or filters.errors %}<a class="clear-filters" href="{{ url_for('discover') }}">Clear all filters</a>{% endif %}
+                <form method="get" action="{{ url_for('discover') }}">
+                    {% if filters.errors %}<div class="filter-errors" role="alert">{% for error in filters.errors %}<p>{{ error }}</p>{% endfor %}</div>{% endif %}
+                    <fieldset><legend>Age range</legend><div class="age-fields"><label>Minimum<input type="number" name="age_min" min="18" max="120" value="{{ filters.age_min or '' }}" inputmode="numeric"></label><label>Maximum<input type="number" name="age_max" min="18" max="120" value="{{ filters.age_max or '' }}" inputmode="numeric"></label></div></fieldset>
+                    <fieldset><legend>Gender</legend><label class="select-label" for="gender-filter">Show<select id="gender-filter" name="gender"><option value="">Everyone</option>{% for value, label in gender_options.items() %}<option value="{{ value }}"{% if filters.gender == value %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></label></fieldset>
+                    <fieldset class="filter-checks"><legend>Languages</legend><label class="filter-search-label" for="discover-language-search">Search languages</label><input id="discover-language-search" class="filter-search" type="search" placeholder="Search languages" autocomplete="off" data-filter-search="language-options" aria-controls="language-options"><div class="filter-options language-filter-options" id="language-options" data-filter-options>{% for language in languages %}<label data-filter-option data-filter-name="{{ language.name|lower }}"><input type="checkbox" name="languages" value="{{ language.id }}"{% if language.id in filters.language_ids %} checked{% endif %}><span>{{ language.name }}</span></label>{% endfor %}</div><p class="filter-empty" data-filter-empty="language-options" hidden>No matching languages.</p></fieldset>
+                    <fieldset class="filter-checks"><legend>Interests</legend><div class="filter-options">{% for interest in interests %}<label><input type="checkbox" name="interests" value="{{ interest.id }}"{% if interest.id in filters.interest_ids %} checked{% endif %}><span>{{ interest.name }}</span></label>{% endfor %}</div></fieldset>
+                    <fieldset class="filter-checks"><legend>Connection intentions</legend><div class="filter-options">{% for intention in intentions %}<label><input type="checkbox" name="intentions" value="{{ intention.id }}"{% if intention.id in filters.intention_ids %} checked{% endif %}><span>{{ intention.name }}</span></label>{% endfor %}</div></fieldset>
+                    <button class="apply-filters" type="submit">Apply filters</button>
+                </form>
+                </div>
+            </details>
+            <section class="results-section" id="results" aria-labelledby="results-heading">
+                <div class="results-heading"><h2 id="results-heading">People nearby</h2><p aria-live="polite">{{ results.total }} {{ 'person' if results.total == 1 else 'people' }}</p></div>
+                {% if results.items %}
+                    <div class="people-grid">
+                        {% for result in results.items %}{% set person = result.profile.user %}
+                        <article class="person-card" data-user-id="{{ person.id }}">
+                            <a class="person-photo-link" href="{{ url_for('person_profile', user_id=person.id) }}" aria-label="View {{ person.first_name }}'s profile">{% if result.profile.profile_photo_key %}<img src="{{ url_for('profile_photo', key=result.profile.profile_photo_key) }}" alt="Profile photo of {{ person.first_name }}">{% else %}<span aria-hidden="true">{{ person.first_name[0]|upper }}</span>{% endif %}</a>
+                            <div class="person-card-body"><div class="person-heading"><div><h3><a href="{{ url_for('person_profile', user_id=person.id) }}">{{ person.first_name }}, {{ person.age }}</a></h3><p>{{ result.profile.discovery_city }}, {{ country_name(result.profile.discovery_country_code) }}</p></div>{% if result.profile.gender != 'prefer_not_to_say' %}<span>{{ result.profile.gender_description if result.profile.gender == 'self_described' else gender_options[result.profile.gender] }}</span>{% endif %}</div>
+                            {% if result.profile.bio %}<p class="person-bio">{{ result.profile.bio|truncate(135) }}</p>{% endif %}
+                            {% if result.reasons %}<ul class="relevance-list" aria-label="Why this person may be relevant">{% for reason in result.reasons %}<li>{{ reason }}</li>{% endfor %}</ul>{% endif %}
+                            <dl class="person-details"><div><dt>Languages</dt><dd>{{ result.profile.languages|map(attribute='name')|join(', ') }}</dd></div><div><dt>Interests</dt><dd>{{ result.profile.interests|map(attribute='name')|join(', ') }}</dd></div><div><dt>Here for</dt><dd>{{ result.profile.connection_intents|map(attribute='name')|join(', ') }}</dd></div></dl>
+                            <a class="view-profile" href="{{ url_for('person_profile', user_id=person.id) }}">View profile <span aria-hidden="true">→</span></a></div>
+                        </article>{% endfor %}
+                    </div>
+                    {% if results.pages > 1 %}<nav class="pagination" aria-label="Discovery pages">{% if results.page > 1 %}<a rel="prev" href="{{ page_url(results.page - 1) }}">Previous</a>{% endif %}<span>Page {{ results.page }} of {{ results.pages }}</span>{% if results.page < results.pages %}<a rel="next" href="{{ page_url(results.page + 1) }}">Next</a>{% endif %}</nav>{% endif %}
+                {% else %}
+                    <div class="empty-state"><h3>{{ 'No profiles match these filters.' if filters.active else "No one is showing up in " ~ current_user.profile.discovery_city ~ " yet." }}</h3><p>{{ 'Try widening your filters to see more people nearby.' if filters.active else 'Friendly is growing. Check back as more people in your area join.' }}</p><div>{% if filters.active %}<a class="empty-primary" href="{{ url_for('discover') }}">Clear filters</a>{% endif %}<a href="{{ url_for('edit_profile') }}">Edit discovery location</a><a href="{{ url_for('profile') }}">Update profile</a></div></div>
+                {% endif %}
+            </section>
+        </div>
+    </main>
+</body>
+</html>

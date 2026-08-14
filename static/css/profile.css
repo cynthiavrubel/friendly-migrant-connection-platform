@@ -1,8 +1,8 @@
 /* Profile shell */
-.profile-header { display:flex; max-width:1120px; align-items:center; justify-content:space-between; gap:20px; }
+.profile-header { display:flex; align-items:center; justify-content:space-between; gap:20px; }
 .profile-header>* { min-width:0; }
 .header-link { color:var(--auth-primary); font-size:.82rem; font-weight:650; text-underline-offset:4px; }
-.profile-main,.profile-view-main { width:calc(100% - 40px); max-width:920px; margin-inline:auto; padding:22px 0 72px; }
+.profile-main,.profile-view-main { width:min(calc(100% - (2 * var(--page-gutter))),var(--content-max)); max-width:920px; margin-inline:auto; padding:22px 0 72px; }
 .profile-form-card,.public-profile { width:100%; max-width:100%; min-width:0; border:1px solid var(--auth-border); border-radius:22px; background:rgba(255,255,255,.95); box-shadow:0 22px 55px rgba(45,78,67,.09); }
 .profile-form-card { padding:42px clamp(24px,6vw,62px); }
 .profile-intro { max-width:640px; margin-bottom:36px; }
@@ -109,8 +109,8 @@
 .tag-list li { max-width:100%; padding:7px 10px; overflow-wrap:anywhere; border:1px solid #e0e7e3; border-radius:999px; background:#fafcfb; color:#536b64; font-size:.72rem; }
 .profile-card-footer { padding:0 40px 38px; }
 
-@media (max-width:680px) {
-    .profile-main,.profile-view-main { width:calc(100% - 32px); padding-top:12px; }
+@media (max-width:767px) {
+    .profile-main,.profile-view-main { padding-top:12px; }
     .profile-form-card { padding:29px 20px; }
     .field-grid { grid-template-columns:minmax(0,1fr); }
     .field-grid .form-field+.form-field { margin-top:16px; }
@@ -123,11 +123,6 @@
     .profile-card-footer { padding:0 22px 28px; }
 }
 @media (max-width:480px) {
-    .profile-header { width:calc(100% - 32px); gap:12px; padding-block:16px; }
-    .profile-header .auth-brand { gap:8px; font-size:1.05rem; }
-    .profile-header .auth-brand svg { width:32px; height:32px; }
-    .profile-header .header-link { flex:0 0 auto; font-size:.76rem; }
-    .profile-view-main { width:calc(100% - 24px); }
     .public-profile-header { display:flex; align-items:center; flex-direction:column; gap:0; padding:27px 18px 25px; text-align:center; }
     .public-profile-header>div:not(.profile-avatar) { display:contents; }
     .public-profile-header .auth-eyebrow { order:1; margin-bottom:14px; }
