@@ -150,3 +150,45 @@ class ConnectionIntent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     slug = db.Column(db.String(120), unique=True, nullable=False)
+
+
+class ConnectionRequest(db.Model):
+    """One directional request/state row for an unordered pair of members."""
+
+    __tablename__ = "connection_requests"
+    __table_args__ = (
+        db.CheckConstraint("sender_id <> recipient_id", name="ck_connection_requests_distinct_users"),
+        db.CheckConstraint("pair_low_id < pair_high_id", name="ck_connection_requests_ordered_pair"),
+        db.CheckConstraint(
+            "(sender_id = pair_low_id AND recipient_id = pair_high_id) OR "
+            "(sender_id = pair_high_id AND recipient_id = pair_low_id)",
+            name="ck_connection_requests_pair_members",
+        ),
+        db.CheckConstraint(
+            "status IN ('pending', 'accepted', 'declined')",
+            name="ck_connection_requests_status",
+        ),
+        db.UniqueConstraint("pair_low_id", "pair_high_id", name="uq_connection_requests_pair"),
+        db.Index("ix_connection_requests_recipient_status", "recipient_id", "status"),
+        db.Index("ix_connection_requests_sender_status", "sender_id", "status"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    # Canonical pair IDs enforce one state machine regardless of direction.
+    pair_low_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    pair_high_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    status = db.Column(db.String(16), nullable=False, default="pending")
+    introductory_message = db.Column(db.String(300))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(
+        db.DateTime(timezone=True),
+        nullable=False,
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+    )
+    responded_at = db.Column(db.DateTime(timezone=True))
+
+    sender = db.relationship("User", foreign_keys=[sender_id])
+    recipient = db.relationship("User", foreign_keys=[recipient_id])

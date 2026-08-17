@@ -83,6 +83,23 @@ class RemoveProfilePhotoForm(FlaskForm):
     submit = SubmitField("Remove photo")
 
 
+class ConnectionRequestForm(FlaskForm):
+    """Validate an optional, plain-text introduction for a connection request."""
+
+    introduction = TextAreaField(
+        "Optional introduction",
+        filters=[strip_whitespace],
+        validators=[Optional(), Length(max=300)],
+    )
+    submit = SubmitField("Send request")
+
+
+class ConnectionActionForm(FlaskForm):
+    """Provide CSRF protection for connection state transitions."""
+
+    submit = SubmitField("Continue")
+
+
 class ProfileForm(FlaskForm):
     """Validate creation and editing of a complete Friendly profile."""
 

@@ -5,12 +5,24 @@ from urllib.parse import unquote, urlencode, urlsplit
 from flask import Flask, abort, flash, g, redirect, render_template, request, send_file, session, url_for
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from config import DevelopmentConfig
+from connections import (
+    ConnectionError,
+    accept_request,
+    cancel_request,
+    connection_lists,
+    decline_request,
+    relationship_between,
+    relationship_state,
+    remove_connection,
+    send_request,
+    states_for_users,
+)
 from discovery import discover_profiles, parse_filters, public_profile
-from forms import LoginForm, LogoutForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
-from models import ConnectionIntent, Interest, Language, Profile, User, db
+from forms import ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from models import ConnectionIntent, ConnectionRequest, Interest, Language, Profile, User, db
 from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
 from profile_photo_storage import PROFILE_PHOTO_KEY_PATTERN, build_profile_photo_storage
 from profile_photos import ProfilePhotoError, generate_profile_photo_key, process_profile_photo
@@ -46,7 +58,20 @@ def load_current_user():
 @app.context_processor
 def inject_template_context():
     """Make common page context available without duplicating route logic."""
-    return {"current_year": datetime.now().year, "current_user": g.user, "country_name": country_name}
+    received_count = 0
+    if g.user is not None:
+        received_count = db.session.scalar(
+            db.select(db.func.count(ConnectionRequest.id)).where(
+                ConnectionRequest.recipient_id == g.user.id,
+                ConnectionRequest.status == "pending",
+            )
+        ) or 0
+    return {
+        "current_year": datetime.now().year,
+        "current_user": g.user,
+        "country_name": country_name,
+        "received_connection_count": received_count,
+    }
 
 
 def configure_profile_choices(form):
@@ -193,6 +218,11 @@ def discover():
     except (TypeError, ValueError):
         requested_page = 1
     results = discover_profiles(db.session, g.user.profile, filters, requested_page)
+    relationship_states = states_for_users(
+        db.session,
+        g.user.id,
+        [result.profile.user_id for result in results.items],
+    )
 
     def page_url(number):
         query = [*filters.query_items(), ("page", number)]
@@ -207,6 +237,7 @@ def discover():
         intentions=intentions,
         gender_options=gender_options,
         page_url=page_url,
+        relationship_states=relationship_states,
     )
 
 
@@ -216,14 +247,129 @@ def person_profile(user_id):
     """Render only another member's deliberately public profile fields."""
     if user_id == g.user.id:
         return redirect(url_for("profile"))
-    profile_record = public_profile(db.session, user_id)
+    relationship = relationship_between(db.session, g.user.id, user_id)
+    # Pending and established relationships remain viewable if the other
+    # member later pauses new requests. Discovery still requires openness.
+    profile_record = public_profile(
+        db.session,
+        user_id,
+        require_open=not (relationship and relationship.status in {"pending", "accepted"}),
+    )
     if profile_record is None:
         abort(404)
     return render_template(
         "person_profile.html",
         profile=profile_record,
         gender_labels=dict(GENDER_CHOICES),
+        relationship_state=relationship_state(g.user.id, user_id, relationship),
     )
+
+
+@app.route("/people/<int:user_id>/connect", methods=["GET", "POST"])
+@profile_complete_required
+def connect_person(user_id):
+    """Confirm and create a connection request without trusting client identity."""
+    if user_id == g.user.id:
+        abort(400)
+    relationship = relationship_between(db.session, g.user.id, user_id)
+    # Existing pending/accepted relationships remain viewable if someone later
+    # pauses new requests; discovery eligibility itself still requires openness.
+    profile_record = public_profile(
+        db.session,
+        user_id,
+        require_open=not (relationship and relationship.status in {"pending", "accepted"}),
+    )
+    if profile_record is None:
+        abort(404)
+    state = relationship_state(g.user.id, user_id, relationship)
+    if state.key == "received":
+        flash("You already have a connection request from this person.", "info")
+        return redirect(url_for("connections", tab="received"))
+    if state.key != "available":
+        flash(state.label, "info")
+        return redirect(url_for("person_profile", user_id=user_id))
+
+    form = ConnectionRequestForm()
+    if form.validate_on_submit():
+        try:
+            send_request(db.session, g.user, user_id, form.introduction.data)
+            db.session.commit()
+            flash(f"Connection request sent to {profile_record.user.first_name}.", "success")
+            return redirect(url_for("person_profile", user_id=user_id))
+        except ConnectionError as error:
+            db.session.rollback()
+            flash(error.message, "info")
+            return redirect(url_for("person_profile", user_id=user_id))
+        except IntegrityError:
+            db.session.rollback()
+            flash("That connection state changed. Refresh and try again.", "info")
+            return redirect(url_for("person_profile", user_id=user_id))
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception("Connection request failed because of a database error.")
+            flash("We couldn't send that request right now. Please try again.", "error")
+            return redirect(url_for("person_profile", user_id=user_id))
+    return render_template("connect.html", form=form, profile=profile_record)
+
+
+@app.route("/connections")
+@login_required
+def connections():
+    sections = connection_lists(db.session, g.user.id)
+    tab = request.args.get("tab", "connections")
+    if tab not in sections:
+        tab = "connections"
+    return render_template(
+        "connections.html",
+        sections=sections,
+        active_tab=tab,
+        action_form=ConnectionActionForm(),
+    )
+
+
+def _connection_transition(action, relationship_id, success_message, tab):
+    form = ConnectionActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+    try:
+        action(db.session, relationship_id, g.user.id)
+        db.session.commit()
+        flash(success_message, "success")
+    except ConnectionError as error:
+        db.session.rollback()
+        flash(error.message, "info")
+    except IntegrityError:
+        db.session.rollback()
+        flash("That connection state changed. Refresh and try again.", "info")
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Connection transition failed because of a database error.")
+        flash("We couldn't update that connection right now. Please try again.", "error")
+    return redirect(url_for("connections", tab=tab))
+
+
+@app.post("/connections/<int:relationship_id>/accept")
+@login_required
+def accept_connection(relationship_id):
+    return _connection_transition(accept_request, relationship_id, "You are now connected.", "connections")
+
+
+@app.post("/connections/<int:relationship_id>/decline")
+@login_required
+def decline_connection(relationship_id):
+    return _connection_transition(decline_request, relationship_id, "The request has been removed.", "received")
+
+
+@app.post("/connections/<int:relationship_id>/cancel")
+@login_required
+def cancel_connection(relationship_id):
+    return _connection_transition(cancel_request, relationship_id, "Your request has been cancelled.", "sent")
+
+
+@app.post("/connections/<int:relationship_id>/remove")
+@login_required
+def remove_connection_route(relationship_id):
+    return _connection_transition(remove_connection, relationship_id, "The connection has been removed.", "connections")
 
 
 @app.route("/profile")
