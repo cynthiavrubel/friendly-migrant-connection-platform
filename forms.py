@@ -100,6 +100,17 @@ class ConnectionActionForm(FlaskForm):
     submit = SubmitField("Continue")
 
 
+class MessageForm(FlaskForm):
+    """Validate a private plain-text message without trusting sender fields."""
+
+    body = TextAreaField(
+        "Message",
+        filters=[strip_whitespace],
+        validators=[DataRequired(), Length(max=2000)],
+    )
+    submit = SubmitField("Send")
+
+
 class ProfileForm(FlaskForm):
     """Validate creation and editing of a complete Friendly profile."""
 

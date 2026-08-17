@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/layout.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/connections.css') }}">
 </head>
 <body>
-    <header class="auth-header app-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><nav class="app-nav" aria-label="Account"><a href="{{ url_for('discover') }}">Discover</a><a href="{{ url_for('connections') }}">Connections</a><a href="{{ url_for('profile') }}">My profile</a></nav></header>
+    <header class="auth-header app-header"><a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span></a><nav class="app-nav" aria-label="Account"><a href="{{ url_for('discover') }}">Discover</a><a href="{{ url_for('connections') }}">Connections</a><a href="{{ url_for('messages') }}">Messages{% if unread_conversation_count %} ({{ unread_conversation_count }}){% endif %}</a><a href="{{ url_for('profile') }}">My profile</a></nav></header>
     <main class="connection-form-main friendly-container">
         <section class="connection-form-card friendly-card" aria-labelledby="connect-heading">
             <p class="auth-eyebrow">Start with hello</p><h1 id="connect-heading">Connect with {{ profile.user.first_name }}</h1><p class="connection-form-copy">A short introduction can make the first conversation feel easier. It is completely optional.</p>

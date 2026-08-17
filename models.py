@@ -192,3 +192,54 @@ class ConnectionRequest(db.Model):
 
     sender = db.relationship("User", foreign_keys=[sender_id])
     recipient = db.relationship("User", foreign_keys=[recipient_id])
+
+
+class Conversation(db.Model):
+    """The single durable private conversation for an unordered member pair."""
+
+    __tablename__ = "conversations"
+    __table_args__ = (
+        db.CheckConstraint("user_low_id < user_high_id", name="ck_conversations_ordered_pair"),
+        db.UniqueConstraint("user_low_id", "user_high_id", name="uq_conversations_pair"),
+        db.Index("ix_conversations_low_activity", "user_low_id", "last_activity_at"),
+        db.Index("ix_conversations_high_activity", "user_high_id", "last_activity_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_low_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    user_high_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    last_activity_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    user_low = db.relationship("User", foreign_keys=[user_low_id])
+    user_high = db.relationship("User", foreign_keys=[user_high_id])
+    messages = db.relationship(
+        "Message",
+        back_populates="conversation",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+
+
+class Message(db.Model):
+    """A plain-text message whose sender is always inferred from the session."""
+
+    __tablename__ = "messages"
+    __table_args__ = (
+        db.Index("ix_messages_conversation_created", "conversation_id", "created_at", "id"),
+        db.Index("ix_messages_conversation_unread", "conversation_id", "read_at", "sender_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(
+        db.Integer,
+        db.ForeignKey("conversations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    sender_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    body = db.Column(db.String(2000), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    read_at = db.Column(db.DateTime(timezone=True))
+
+    conversation = db.relationship("Conversation", back_populates="messages")
+    sender = db.relationship("User", foreign_keys=[sender_id])
