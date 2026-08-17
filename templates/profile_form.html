@@ -19,7 +19,7 @@
         <a class="auth-brand" href="{{ url_for('home') }}" aria-label="Friendly home">
             <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg><span>Friendly</span>
         </a>
-        <nav class="app-nav" aria-label="Account"><a href="{{ url_for('dashboard') }}">Dashboard</a>{% if profile and profile.is_complete %}<a href="{{ url_for('discover') }}">Discover</a>{% endif %}<a href="{{ url_for('connections') }}">Connections{% if received_connection_count %} ({{ received_connection_count }}){% endif %}</a></nav>
+        <nav class="app-nav" aria-label="Account"><a href="{{ url_for('dashboard') }}">Dashboard</a>{% if profile and profile.is_complete %}<a href="{{ url_for('discover') }}">Discover</a>{% endif %}<a href="{{ url_for('connections') }}">Connections{% if received_connection_count %} ({{ received_connection_count }}){% endif %}</a><a href="{{ url_for('messages') }}">Messages{% if unread_conversation_count %} ({{ unread_conversation_count }}){% endif %}</a></nav>
     </header>
     <main class="profile-main friendly-container">
         <section class="profile-form-card" aria-labelledby="profile-heading">

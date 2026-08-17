@@ -16,7 +16,7 @@
             <svg viewBox="0 0 36 36" aria-hidden="true"><path d="M11 9.5h14M11 17.5h9M11 25.5h5"/><circle cx="27" cy="25.5" r="2.5"/></svg>
             <span>Friendly</span>
         </a>
-        <nav class="app-nav" aria-label="Account">{% if profile and profile.is_complete %}<a href="{{ url_for('discover') }}">Discover</a>{% endif %}<a href="{{ url_for('connections') }}">Connections{% if received_connection_count %} ({{ received_connection_count }}){% endif %}</a>{% if profile and profile.is_complete %}<a href="{{ url_for('profile') }}">My profile</a>{% else %}<a href="{{ url_for('edit_profile') }}">Profile</a>{% endif %}</nav>
+        <nav class="app-nav" aria-label="Account">{% if profile and profile.is_complete %}<a href="{{ url_for('discover') }}">Discover</a>{% endif %}<a href="{{ url_for('connections') }}">Connections{% if received_connection_count %} ({{ received_connection_count }}){% endif %}</a><a href="{{ url_for('messages') }}">Messages{% if unread_conversation_count %} ({{ unread_conversation_count }}){% endif %}</a>{% if profile and profile.is_complete %}<a href="{{ url_for('profile') }}">My profile</a>{% else %}<a href="{{ url_for('edit_profile') }}">Profile</a>{% endif %}</nav>
     </header>
     <main class="auth-main dashboard-main">
         <section class="auth-card dashboard-card" aria-labelledby="dashboard-heading">

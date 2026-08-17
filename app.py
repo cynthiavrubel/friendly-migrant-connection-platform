@@ -21,7 +21,21 @@ from connections import (
     states_for_users,
 )
 from discovery import discover_profiles, parse_filters, public_profile
-from forms import ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from forms import ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from messaging import (
+    MessagingError,
+    accessible_conversation,
+    active_connection_between,
+    format_message_time,
+    inbox_page,
+    mark_conversation_read,
+    message_page,
+    message_preview,
+    other_participant,
+    send_message,
+    start_conversation,
+    unread_conversation_count,
+)
 from models import ConnectionIntent, ConnectionRequest, Interest, Language, Profile, User, db
 from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
 from profile_photo_storage import PROFILE_PHOTO_KEY_PATTERN, build_profile_photo_storage
@@ -59,6 +73,7 @@ def load_current_user():
 def inject_template_context():
     """Make common page context available without duplicating route logic."""
     received_count = 0
+    unread_count = 0
     if g.user is not None:
         received_count = db.session.scalar(
             db.select(db.func.count(ConnectionRequest.id)).where(
@@ -66,11 +81,13 @@ def inject_template_context():
                 ConnectionRequest.status == "pending",
             )
         ) or 0
+        unread_count = unread_conversation_count(db.session, g.user.id)
     return {
         "current_year": datetime.now().year,
         "current_user": g.user,
         "country_name": country_name,
         "received_connection_count": received_count,
+        "unread_conversation_count": unread_count,
     }
 
 
@@ -370,6 +387,97 @@ def cancel_connection(relationship_id):
 @login_required
 def remove_connection_route(relationship_id):
     return _connection_transition(remove_connection, relationship_id, "The connection has been removed.", "connections")
+
+
+def _positive_page_argument(default=None):
+    raw_page = request.args.get("page")
+    if raw_page is None:
+        return default
+    try:
+        return max(1, int(raw_page))
+    except (TypeError, ValueError):
+        return 1
+
+
+@app.get("/messages")
+@login_required
+def messages():
+    """Show one efficient, paginated inbox row per private conversation."""
+    page = inbox_page(db.session, g.user.id, _positive_page_argument(1))
+    return render_template(
+        "messages.html",
+        conversations=page,
+        message_preview=message_preview,
+        format_message_time=format_message_time,
+    )
+
+
+@app.get("/messages/start/<int:user_id>")
+@login_required
+def start_message_conversation(user_id):
+    """Lazily create the canonical conversation only for an active connection."""
+    try:
+        conversation = start_conversation(db.session, g.user.id, user_id)
+        db.session.commit()
+        return redirect(url_for("conversation", conversation_id=conversation.id))
+    except MessagingError as error:
+        db.session.rollback()
+        if error.code in {"not_found", "self"}:
+            abort(404)
+        flash(error.message, "info")
+        return redirect(url_for("connections"))
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Conversation creation failed because of a database error.")
+        flash("We couldn't open that conversation right now. Please try again.", "error")
+        return redirect(url_for("connections"))
+
+
+@app.get("/messages/<int:conversation_id>")
+@login_required
+def conversation(conversation_id):
+    """Render private history and mark messages received by this member as read."""
+    try:
+        conversation_record = accessible_conversation(db.session, conversation_id, g.user.id)
+    except MessagingError:
+        abort(404)
+    other = other_participant(conversation_record, g.user.id)
+    can_send = active_connection_between(db.session, g.user.id, other.id)
+    mark_conversation_read(db.session, conversation_record.id, g.user.id)
+    db.session.commit()
+    page = message_page(db.session, conversation_record.id, _positive_page_argument())
+    return render_template(
+        "conversation.html",
+        conversation=conversation_record,
+        other=other,
+        messages_page=page,
+        can_send=can_send,
+        form=MessageForm(),
+        format_message_time=format_message_time,
+    )
+
+
+@app.post("/messages/<int:conversation_id>/send")
+@login_required
+def send_conversation_message(conversation_id):
+    """Persist a plain-text message with its sender derived only from the session."""
+    form = MessageForm()
+    if not form.validate_on_submit():
+        flash(form.body.errors[0] if form.body.errors else "Check your message and try again.", "error")
+        return redirect(url_for("conversation", conversation_id=conversation_id))
+    try:
+        send_message(db.session, conversation_id, g.user.id, form.body.data)
+        db.session.commit()
+    except MessagingError as error:
+        db.session.rollback()
+        if error.code == "not_found":
+            abort(404)
+        flash(error.message, "info")
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Private message failed because of a database error.")
+        flash("We couldn't send that message right now. Please try again.", "error")
+    return redirect(url_for("conversation", conversation_id=conversation_id))
 
 
 @app.route("/profile")
