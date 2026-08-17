@@ -120,10 +120,9 @@ def _association_count(table, column, identifiers):
     )
 
 
-def _complete_profile_conditions():
+def _complete_profile_conditions(*, require_open=True):
     interest_count = select(func.count()).where(profile_interests.c.profile_id == Profile.id).correlate(Profile).scalar_subquery()
-    return [
-        Profile.open_to_connections.is_(True),
+    conditions = [
         Profile.profile_photo_key.is_not(None),
         func.trim(Profile.profile_photo_key) != "",
         Profile.gender.is_not(None),
@@ -142,6 +141,9 @@ def _complete_profile_conditions():
         interest_count.between(3, 12),
         Profile.connection_intents.any(),
     ]
+    if require_open:
+        conditions.insert(0, Profile.open_to_connections.is_(True))
+    return conditions
 
 
 def _complete_candidate_conditions(current_profile):
@@ -239,12 +241,12 @@ def discover_profiles(session, current_profile, filters, page=1):
     return DiscoveryPage(items, page, pages, total)
 
 
-def public_profile(session, user_id):
+def public_profile(session, user_id, *, require_open=True):
     """Return a complete, open adult profile suitable for authenticated viewing."""
     statement = (
         select(Profile)
         .join(Profile.user)
-        .where(Profile.user_id == user_id, and_(*_complete_profile_conditions()))
+        .where(Profile.user_id == user_id, and_(*_complete_profile_conditions(require_open=require_open)))
         .options(joinedload(Profile.user), selectinload(Profile.languages), selectinload(Profile.interests), selectinload(Profile.connection_intents))
     )
     return session.scalar(statement)

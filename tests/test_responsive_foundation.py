@@ -20,13 +20,13 @@ class ResponsiveFoundationTests(unittest.TestCase):
     def test_major_pages_load_shared_layout(self):
         for template in (
             "home.html", "register.html", "login.html", "dashboard.html", "profile_form.html",
-            "profile.html", "discover.html", "person_profile.html",
+            "profile.html", "discover.html", "person_profile.html", "connect.html", "connections.html",
         ):
             source = (ROOT / "templates" / template).read_text(encoding="utf-8")
             self.assertIn("css/layout.css", source, template)
 
     def test_authenticated_pages_use_shared_header(self):
-        for template in ("dashboard.html", "profile_form.html", "profile.html", "discover.html", "person_profile.html"):
+        for template in ("dashboard.html", "profile_form.html", "profile.html", "discover.html", "person_profile.html", "connect.html", "connections.html"):
             source = (ROOT / "templates" / template).read_text(encoding="utf-8")
             self.assertIn("app-header", source, template)
             self.assertIn("app-nav", source, template)
