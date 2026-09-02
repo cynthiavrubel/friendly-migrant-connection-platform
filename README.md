@@ -55,6 +55,12 @@ Friendly records successful connection requests and acceptances, new private-mes
 
 Plan date/time input is interpreted as wall-clock time in the selected IANA timezone (for example, `Europe/Dublin`), then converted to UTC for storage and lifecycle comparisons. Plan cards, details, and edit forms convert that UTC instant back to the plan's own timezone. Nonexistent and duplicated local times during daylight-saving transitions are rejected with a form error rather than silently choosing an unintended instant. Browser timezone detection is a creation-form convenience only; server-side validation remains authoritative, and `Europe/Dublin` is the fallback when no supported browser hint is available. Existing Sprint 9 plans are migrated with `UTC`, preserving their original stored instant and display meaning.
 
+## Safety and trust
+
+Friendly stores blocks directionally—the member who created a block can manage it—but treats either direction as a mutual interaction restriction. Blocking quietly removes pending or accepted connection state and removes cross-pair participation from upcoming active plans hosted by either person. It does not delete message history or past/cancelled plan history; existing conversations remain readable but cannot accept new messages. Unblocking removes only the current member's block and never restores connections or plan participation automatically.
+
+Reports are private, plain-text moderation records with controlled reason values. Reporting does not automatically block, suspend, hide, notify, or otherwise punish the reported member, and report details are not exposed through member-facing routes. The MVP intentionally has no moderation dashboard or automated moderation workflow.
+
 ## Technology stack
 
 ### Backend

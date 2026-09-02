@@ -325,3 +325,50 @@ class Notification(db.Model):
 
     user = db.relationship("User", foreign_keys=[user_id])
     actor = db.relationship("User", foreign_keys=[actor_id])
+
+
+class UserBlock(db.Model):
+    """A directional safety choice that restricts interaction in both directions."""
+
+    __tablename__ = "user_blocks"
+    __table_args__ = (
+        db.CheckConstraint("blocker_id <> blocked_id", name="ck_user_blocks_distinct_users"),
+        db.UniqueConstraint("blocker_id", "blocked_id", name="uq_user_blocks_direction"),
+        db.Index("ix_user_blocks_blocked_blocker", "blocked_id", "blocker_id"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    blocker_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    blocked_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    blocker = db.relationship("User", foreign_keys=[blocker_id])
+    blocked = db.relationship("User", foreign_keys=[blocked_id])
+
+
+class UserReport(db.Model):
+    """A private, non-punitive moderation record submitted by a member."""
+
+    __tablename__ = "user_reports"
+    __table_args__ = (
+        db.CheckConstraint(
+            "reason IN ('harassment', 'hate_or_abuse', 'sexual_or_inappropriate', "
+            "'spam_or_scam', 'impersonation', 'unsafe_behavior', 'other')",
+            name="ck_user_reports_reason",
+        ),
+        db.CheckConstraint("status IN ('open')", name="ck_user_reports_status"),
+        db.Index("ix_user_reports_reporter_created", "reporter_id", "created_at"),
+        db.Index("ix_user_reports_reported_created", "reported_user_id", "created_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    # Nullable SET NULL keeps moderation history if account deletion is added later.
+    reporter_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reported_user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    reason = db.Column(db.String(40), nullable=False)
+    details = db.Column(db.String(2000))
+    status = db.Column(db.String(16), nullable=False, default="open")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    reporter = db.relationship("User", foreign_keys=[reporter_id])
+    reported_user = db.relationship("User", foreign_keys=[reported_user_id])

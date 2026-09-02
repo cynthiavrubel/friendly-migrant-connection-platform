@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import aliased, joinedload
 
 from models import ConnectionRequest, Conversation, Message, User, db
+from safety import blocked_user_ids_select, is_blocked_pair
 
 
 INBOX_PAGE_SIZE = 20
@@ -85,6 +86,8 @@ def start_conversation(session, actor_id, other_id):
     if other is None:
         raise MessagingError("That member could not be found.", "not_found")
     low_id, high_id = pair_ids(actor_id, other_id)
+    if is_blocked_pair(session, actor_id, other_id):
+        raise MessagingError("Messaging is unavailable with this member.", "blocked")
     if not active_connection_between(session, actor_id, other_id):
         raise MessagingError("You can only message active connections.", "not_connected")
     conversation = conversation_between(session, actor_id, other_id)
@@ -131,6 +134,8 @@ def send_message(session, conversation_id, actor_id, body):
     # coalescing deterministic under concurrent sends on MySQL.
     conversation = accessible_conversation(session, conversation_id, actor_id, lock=True)
     other = other_participant(conversation, actor_id)
+    if is_blocked_pair(session, actor_id, other.id):
+        raise MessagingError("Messaging is unavailable for this conversation.", "blocked")
     if not active_connection_between(session, actor_id, other.id):
         raise MessagingError("This conversation is read-only because you are no longer connected.", "read_only")
     normalized = (body or "").strip()
@@ -182,10 +187,12 @@ def _accepted_other_ids(session, actor_id, other_ids):
             ),
         )
     )
-    return {
+    accepted = {
         row.recipient_id if row.sender_id == actor_id else row.sender_id
         for row in rows
     }
+    blocked = set(session.scalars(blocked_user_ids_select(actor_id)))
+    return accepted - blocked
 
 
 def inbox_page(session, actor_id, requested_page=1):

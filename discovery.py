@@ -17,6 +17,7 @@ from models import (
     profile_interests,
     profile_languages,
 )
+from safety import blocked_user_ids_select
 
 
 PER_PAGE = 12
@@ -149,6 +150,7 @@ def _complete_profile_conditions(*, require_open=True):
 def _complete_candidate_conditions(current_profile):
     return [
         Profile.user_id != current_profile.user_id,
+        Profile.user_id.not_in(blocked_user_ids_select(current_profile.user_id)),
         Profile.discovery_country_code == current_profile.discovery_country_code,
         func.lower(func.trim(Profile.discovery_city)) == normalized_city(current_profile.discovery_city),
         *_complete_profile_conditions(),

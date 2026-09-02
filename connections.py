@@ -7,6 +7,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.orm import joinedload, selectinload
 
 from models import ConnectionRequest, Profile, User
+from safety import is_blocked_pair
 
 
 DECLINE_COOLDOWN = timedelta(days=30)
@@ -108,6 +109,8 @@ def send_request(session, sender, recipient_id, message=None, *, now=None):
     if recipient is None:
         raise ConnectionError("That person is not available.", "recipient_unavailable")
     pair_ids(sender.id, recipient.id)
+    if is_blocked_pair(session, sender.id, recipient.id):
+        raise ConnectionError("That person is not available for connections.", "blocked")
     if recipient.profile is None or not recipient.profile.is_complete or not recipient.profile.open_to_connections:
         raise ConnectionError("That person is not available for connections.", "recipient_unavailable")
 
@@ -143,6 +146,8 @@ def accept_request(session, relationship_id, actor_id, *, now=None):
     relationship = session.scalar(select(ConnectionRequest).where(ConnectionRequest.id == relationship_id).with_for_update())
     if relationship is None or relationship.status != "pending" or relationship.recipient_id != actor_id:
         raise ConnectionError("That connection request is no longer available.", "unauthorized")
+    if is_blocked_pair(session, relationship.sender_id, relationship.recipient_id):
+        raise ConnectionError("That connection request is no longer available.", "blocked")
     relationship.status = "accepted"
     relationship.responded_at = now or utc_now()
     session.flush()

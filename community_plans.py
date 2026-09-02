@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
 from models import CommunityPlan, PlanParticipant, Profile, User, db
+from safety import is_blocked_pair
 from timezones import TimezoneError, local_to_utc, normalize_utc
 
 
@@ -181,6 +182,8 @@ def join_plan(session, plan_id, actor_id, *, now=None):
         raise PlanError("That plan could not be found.", "not_found")
     if plan.status != "active" or plan_is_past(plan, now):
         raise PlanError("This plan is no longer open for joining.", "read_only")
+    if is_blocked_pair(session, actor_id, plan.creator_id):
+        raise PlanError("This plan is not available for joining.", "blocked")
     exists = session.get(PlanParticipant, (plan.id, actor_id))
     if exists is not None:
         raise PlanError("You are already going to this plan.", "duplicate")
