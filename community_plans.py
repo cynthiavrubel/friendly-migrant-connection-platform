@@ -8,6 +8,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload, selectinload
 
 from models import CommunityPlan, PlanParticipant, Profile, User, db
+from timezones import TimezoneError, local_to_utc, normalize_utc
 
 
 PLAN_CATEGORIES = (
@@ -55,12 +56,8 @@ def utc_now():
 
 
 def aware_utc(value):
-    """Treat the MVP datetime-local value as UTC and normalize SQLite values."""
-    if value is None:
-        return None
-    if value.tzinfo is None:
-        return value.replace(tzinfo=timezone.utc)
-    return value.astimezone(timezone.utc)
+    """Backward-compatible alias for centralized database UTC normalization."""
+    return normalize_utc(value)
 
 
 def normalize_city(value):
@@ -86,17 +83,22 @@ def validate_plan_values(data, *, now=None):
         raise PlanError("Choose a valid plan category.", "category")
     if not 2 <= data["capacity"] <= 20:
         raise PlanError("Capacity must be between 2 and 20 people.", "capacity")
-    starts_at = aware_utc(data["starts_at"])
+    timezone_key = data.get("timezone") or "UTC"
+    try:
+        starts_at = local_to_utc(data["starts_at"], timezone_key)
+    except TimezoneError as error:
+        field = "timezone" if error.code == "invalid_timezone" else "starts_at"
+        raise PlanError(error.message, field) from error
     if starts_at is None or starts_at <= (now or utc_now()):
         raise PlanError("Choose a future date and time.", "starts_at")
     if not normalize_city(data["city"]):
         raise PlanError("Enter a city for this plan.", "city")
-    return starts_at
+    return starts_at, timezone_key
 
 
 def create_plan(session, creator, data, *, now=None):
     now = now or utc_now()
-    starts_at = validate_plan_values(data, now=now)
+    starts_at, timezone_key = validate_plan_values(data, now=now)
     city = " ".join(data["city"].strip().split())
     plan = CommunityPlan(
         creator_id=creator.id,
@@ -107,6 +109,7 @@ def create_plan(session, creator, data, *, now=None):
         city=city,
         city_normalized=normalize_city(city),
         starts_at=starts_at,
+        timezone=timezone_key,
         meeting_place_text=(data.get("meeting_place_text") or "").strip() or None,
         capacity=data["capacity"],
         status="active",
@@ -231,7 +234,7 @@ def edit_plan(session, plan_id, actor_id, data, *, now=None):
         raise PlanError("That plan could not be found.", "not_found")
     if plan.status != "active" or plan_is_past(plan, now):
         raise PlanError("Past or cancelled plans cannot be edited.", "read_only")
-    starts_at = validate_plan_values(data, now=now)
+    starts_at, timezone_key = validate_plan_values(data, now=now)
     count = session.scalar(db.select(db.func.count(PlanParticipant.user_id)).where(PlanParticipant.plan_id == plan.id)) or 0
     if data["capacity"] < count:
         raise PlanError(f"Capacity cannot be lower than the {count} people already going.", "capacity")
@@ -243,6 +246,7 @@ def edit_plan(session, plan_id, actor_id, data, *, now=None):
     plan.city = city
     plan.city_normalized = normalize_city(city)
     plan.starts_at = starts_at
+    plan.timezone = timezone_key
     plan.meeting_place_text = (data.get("meeting_place_text") or "").strip() or None
     plan.capacity = data["capacity"]
     plan.updated_at = now

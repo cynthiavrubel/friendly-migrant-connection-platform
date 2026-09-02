@@ -74,6 +74,7 @@ from notifications import (
     owned_notification,
     unread_notification_count,
 )
+from timezones import DEFAULT_TIMEZONE, format_plan_datetime, timezone_choices, utc_to_local
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -454,6 +455,7 @@ def _plan_form_data(form):
         "starts_at": form.starts_at.data,
         "meeting_place_text": form.meeting_place_text.data,
         "capacity": form.capacity.data,
+        "timezone": form.timezone.data,
     }
 
 
@@ -469,6 +471,7 @@ def plans():
         selected_categories=categories,
         category_labels=CATEGORY_LABELS,
         plan_state=plan_state,
+        format_plan_datetime=format_plan_datetime,
     )
 
 
@@ -481,6 +484,7 @@ def create_community_plan():
         form.country_code.data = g.user.profile.discovery_country_code
         form.city.data = g.user.profile.discovery_city
         form.capacity.data = 6
+        form.timezone.data = DEFAULT_TIMEZONE
     if form.validate_on_submit():
         try:
             plan = create_plan(db.session, g.user, _plan_form_data(form))
@@ -494,7 +498,7 @@ def create_community_plan():
             db.session.rollback()
             app.logger.exception("Community plan creation failed because of a database error.")
             flash("We couldn't create that plan right now. Please try again.", "error")
-    return render_template("plan_form.html", form=form, editing=False)
+    return render_template("plan_form.html", form=form, editing=False, timezone_choices=timezone_choices())
 
 
 @app.get("/plans/mine")
@@ -505,6 +509,7 @@ def my_community_plans():
         sections=my_plans(db.session, g.user.id),
         category_labels=CATEGORY_LABELS,
         plan_state=plan_state,
+        format_plan_datetime=format_plan_datetime,
     )
 
 
@@ -524,6 +529,7 @@ def community_plan(plan_id):
         state=plan_state(plan, len(ids)),
         category_label=CATEGORY_LABELS.get(plan.category, "Other"),
         action_form=PlanActionForm(),
+        format_plan_datetime=format_plan_datetime,
     )
 
 
@@ -538,6 +544,9 @@ def edit_community_plan(plan_id):
         return redirect(url_for("community_plan", plan_id=plan.id))
     form = CommunityPlanForm(obj=plan)
     _configure_plan_form(form)
+    if request.method == "GET":
+        form.starts_at.data = utc_to_local(plan.starts_at, plan.timezone).replace(tzinfo=None)
+        form.timezone.data = plan.timezone
     if form.validate_on_submit():
         try:
             edit_plan(db.session, plan.id, g.user.id, _plan_form_data(form))
@@ -551,7 +560,7 @@ def edit_community_plan(plan_id):
             db.session.rollback()
             app.logger.exception("Community plan editing failed because of a database error.")
             flash("We couldn't update that plan right now. Please try again.", "error")
-    return render_template("plan_form.html", form=form, editing=True, plan=plan)
+    return render_template("plan_form.html", form=form, editing=True, plan=plan, timezone_choices=timezone_choices())
 
 
 def _plan_transition(action, plan_id, success_message, *, participant_id=None, notifier=None):

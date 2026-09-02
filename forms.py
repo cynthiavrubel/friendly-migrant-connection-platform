@@ -9,6 +9,7 @@ from wtforms import BooleanField, DateField, DateTimeLocalField, HiddenField, In
 from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 
 from profile_data import GENDER_CHOICES, country_choices
+from timezones import is_valid_timezone
 
 
 def strip_whitespace(value: str | None) -> str | None:
@@ -120,9 +121,14 @@ class CommunityPlanForm(FlaskForm):
     country_code = SelectField("Country", choices=[], validators=[DataRequired()])
     city = StringField("City", filters=[strip_whitespace], validators=[DataRequired(), Length(min=2, max=100)])
     starts_at = DateTimeLocalField("Date and time", format="%Y-%m-%dT%H:%M", validators=[DataRequired()])
+    timezone = StringField("Timezone", filters=[strip_whitespace], validators=[DataRequired(), Length(max=64)])
     meeting_place_text = StringField("Public meeting place", filters=[strip_whitespace], validators=[Optional(), Length(max=200)])
     capacity = IntegerField("Capacity", validators=[DataRequired(), NumberRange(min=2, max=20)])
     submit = SubmitField("Save plan")
+
+    def validate_timezone(self, field):
+        if not is_valid_timezone(field.data):
+            raise ValidationError("Choose a valid timezone.")
 
 
 class PlanActionForm(FlaskForm):
