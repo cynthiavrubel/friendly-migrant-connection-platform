@@ -21,7 +21,7 @@ from connections import (
     states_for_users,
 )
 from discovery import discover_profiles, parse_filters, public_profile
-from forms import CommunityPlanForm, ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, PlanActionForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from forms import CommunityPlanForm, ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, NotificationActionForm, PlanActionForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
 from messaging import (
     MessagingError,
     accessible_conversation,
@@ -57,6 +57,23 @@ from community_plans import (
 from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_choices, country_name, slugify_interest
 from profile_photo_storage import PROFILE_PHOTO_KEY_PATTERN, build_profile_photo_storage
 from profile_photos import ProfilePhotoError, generate_profile_photo_key, process_profile_photo
+from notifications import (
+    NotificationError,
+    destination_for,
+    format_notification_time,
+    mark_all_read,
+    mark_read,
+    notification_page,
+    notify_connection_accepted,
+    notify_connection_request,
+    notify_new_message,
+    notify_plan_cancelled,
+    notify_plan_join,
+    notify_plan_leave,
+    notify_plan_removed,
+    owned_notification,
+    unread_notification_count,
+)
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -91,6 +108,7 @@ def inject_template_context():
     """Make common page context available without duplicating route logic."""
     received_count = 0
     unread_count = 0
+    notification_count = 0
     if g.user is not None:
         received_count = db.session.scalar(
             db.select(db.func.count(ConnectionRequest.id)).where(
@@ -99,12 +117,14 @@ def inject_template_context():
             )
         ) or 0
         unread_count = unread_conversation_count(db.session, g.user.id)
+        notification_count = unread_notification_count(db.session, g.user.id)
     return {
         "current_year": datetime.now().year,
         "current_user": g.user,
         "country_name": country_name,
         "received_connection_count": received_count,
         "unread_conversation_count": unread_count,
+        "unread_notification_count": notification_count,
     }
 
 
@@ -326,7 +346,8 @@ def connect_person(user_id):
     form = ConnectionRequestForm()
     if form.validate_on_submit():
         try:
-            send_request(db.session, g.user, user_id, form.introduction.data)
+            relationship = send_request(db.session, g.user, user_id, form.introduction.data)
+            notify_connection_request(db.session, relationship)
             db.session.commit()
             flash(f"Connection request sent to {profile_record.user.first_name}.", "success")
             return redirect(url_for("person_profile", user_id=user_id))
@@ -361,12 +382,14 @@ def connections():
     )
 
 
-def _connection_transition(action, relationship_id, success_message, tab):
+def _connection_transition(action, relationship_id, success_message, tab, *, notifier=None):
     form = ConnectionActionForm()
     if not form.validate_on_submit():
         abort(400)
     try:
-        action(db.session, relationship_id, g.user.id)
+        relationship = action(db.session, relationship_id, g.user.id)
+        if notifier is not None:
+            notifier(db.session, relationship)
         db.session.commit()
         flash(success_message, "success")
     except ConnectionError as error:
@@ -385,7 +408,7 @@ def _connection_transition(action, relationship_id, success_message, tab):
 @app.post("/connections/<int:relationship_id>/accept")
 @login_required
 def accept_connection(relationship_id):
-    return _connection_transition(accept_request, relationship_id, "You are now connected.", "connections")
+    return _connection_transition(accept_request, relationship_id, "You are now connected.", "connections", notifier=notify_connection_accepted)
 
 
 @app.post("/connections/<int:relationship_id>/decline")
@@ -531,15 +554,20 @@ def edit_community_plan(plan_id):
     return render_template("plan_form.html", form=form, editing=True, plan=plan)
 
 
-def _plan_transition(action, plan_id, success_message, *, participant_id=None):
+def _plan_transition(action, plan_id, success_message, *, participant_id=None, notifier=None):
     form = PlanActionForm()
     if not form.validate_on_submit():
         abort(400)
     try:
         if participant_id is None:
-            action(db.session, plan_id, g.user.id)
+            plan = action(db.session, plan_id, g.user.id)
         else:
-            action(db.session, plan_id, participant_id, g.user.id)
+            plan = action(db.session, plan_id, participant_id, g.user.id)
+        if notifier is not None:
+            if participant_id is None:
+                notifier(db.session, plan, g.user.id)
+            else:
+                notifier(db.session, plan, participant_id, g.user.id)
         db.session.commit()
         flash(success_message, "success")
     except PlanError as error:
@@ -560,25 +588,25 @@ def _plan_transition(action, plan_id, success_message, *, participant_id=None):
 @app.post("/plans/<int:plan_id>/join")
 @profile_complete_required
 def join_community_plan(plan_id):
-    return _plan_transition(join_plan, plan_id, "You joined the plan.")
+    return _plan_transition(join_plan, plan_id, "You joined the plan.", notifier=notify_plan_join)
 
 
 @app.post("/plans/<int:plan_id>/leave")
 @login_required
 def leave_community_plan(plan_id):
-    return _plan_transition(leave_plan, plan_id, "You left the plan.")
+    return _plan_transition(leave_plan, plan_id, "You left the plan.", notifier=notify_plan_leave)
 
 
 @app.post("/plans/<int:plan_id>/cancel")
 @login_required
 def cancel_community_plan(plan_id):
-    return _plan_transition(cancel_plan, plan_id, "The plan has been cancelled.")
+    return _plan_transition(cancel_plan, plan_id, "The plan has been cancelled.", notifier=notify_plan_cancelled)
 
 
 @app.post("/plans/<int:plan_id>/participants/<int:user_id>/remove")
 @login_required
 def remove_plan_participant(plan_id, user_id):
-    return _plan_transition(remove_participant, plan_id, "The participant has been removed.", participant_id=user_id)
+    return _plan_transition(remove_participant, plan_id, "The participant has been removed.", participant_id=user_id, notifier=notify_plan_removed)
 
 
 @app.get("/messages")
@@ -648,7 +676,10 @@ def send_conversation_message(conversation_id):
         flash(form.body.errors[0] if form.body.errors else "Check your message and try again.", "error")
         return redirect(url_for("conversation", conversation_id=conversation_id))
     try:
-        send_message(db.session, conversation_id, g.user.id, form.body.data)
+        message = send_message(db.session, conversation_id, g.user.id, form.body.data)
+        conversation_record = accessible_conversation(db.session, conversation_id, g.user.id)
+        recipient_id = conversation_record.user_high_id if conversation_record.user_low_id == g.user.id else conversation_record.user_low_id
+        notify_new_message(db.session, message, conversation_record, recipient_id)
         db.session.commit()
     except MessagingError as error:
         db.session.rollback()
@@ -660,6 +691,63 @@ def send_conversation_message(conversation_id):
         app.logger.exception("Private message failed because of a database error.")
         flash("We couldn't send that message right now. Please try again.", "error")
     return redirect(url_for("conversation", conversation_id=conversation_id))
+
+
+@app.get("/notifications")
+@login_required
+def notifications():
+    """Show only the signed-in member's paginated activity history."""
+    page = notification_page(db.session, g.user.id, _positive_page_argument(1))
+    return render_template(
+        "notifications.html",
+        notifications_page=page,
+        action_form=NotificationActionForm(),
+        format_notification_time=format_notification_time,
+    )
+
+
+def _notification_form_or_400():
+    form = NotificationActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+
+
+@app.post("/notifications/<int:notification_id>/open")
+@login_required
+def open_notification(notification_id):
+    """POST marks only owned activity read, then redirects to a controlled route."""
+    _notification_form_or_400()
+    try:
+        notification = owned_notification(db.session, notification_id, g.user.id)
+        destination = destination_for(db.session, notification, g.user.id)
+        mark_read(db.session, notification.id, g.user.id)
+        db.session.commit()
+        return redirect(destination)
+    except NotificationError:
+        db.session.rollback()
+        abort(404)
+
+
+@app.post("/notifications/<int:notification_id>/read")
+@login_required
+def read_notification(notification_id):
+    _notification_form_or_400()
+    try:
+        mark_read(db.session, notification_id, g.user.id)
+        db.session.commit()
+    except NotificationError:
+        db.session.rollback()
+        abort(404)
+    return redirect(url_for("notifications"))
+
+
+@app.post("/notifications/read-all")
+@login_required
+def read_all_notifications():
+    _notification_form_or_400()
+    mark_all_read(db.session, g.user.id)
+    db.session.commit()
+    return redirect(url_for("notifications"))
 
 
 @app.route("/profile")

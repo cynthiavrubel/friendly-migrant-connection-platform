@@ -205,6 +205,7 @@ def leave_plan(session, plan_id, actor_id, *, now=None):
         raise PlanError("You are not participating in this plan.", "not_participant")
     session.delete(participant)
     session.flush()
+    return plan
 
 
 def remove_participant(session, plan_id, participant_id, actor_id, *, now=None):
@@ -220,6 +221,7 @@ def remove_participant(session, plan_id, participant_id, actor_id, *, now=None):
         raise PlanError("That person is not participating in this plan.", "not_participant")
     session.delete(participant)
     session.flush()
+    return plan
 
 
 def edit_plan(session, plan_id, actor_id, data, *, now=None):

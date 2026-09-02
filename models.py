@@ -288,3 +288,38 @@ class PlanParticipant(db.Model):
 
     plan = db.relationship("CommunityPlan", back_populates="participants")
     user = db.relationship("User", foreign_keys=[user_id])
+
+
+class Notification(db.Model):
+    """A derived in-app activity record; domain models remain authoritative."""
+
+    __tablename__ = "notifications"
+    __table_args__ = (
+        db.CheckConstraint(
+            "type IN ('connection_request_received', 'connection_request_accepted', 'new_message', "
+            "'plan_participant_joined', 'plan_participant_left', 'plan_participant_removed', 'plan_cancelled')",
+            name="ck_notifications_type",
+        ),
+        db.Index("ix_notifications_user_read", "user_id", "read_at"),
+        db.Index("ix_notifications_user_created", "user_id", "created_at"),
+        db.Index(
+            "ix_notifications_coalesce",
+            "user_id",
+            "type",
+            "related_entity_type",
+            "related_entity_id",
+            "read_at",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    actor_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"))
+    type = db.Column(db.String(40), nullable=False)
+    related_entity_type = db.Column(db.String(32))
+    related_entity_id = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    read_at = db.Column(db.DateTime(timezone=True))
+
+    user = db.relationship("User", foreign_keys=[user_id])
+    actor = db.relationship("User", foreign_keys=[actor_id])

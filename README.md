@@ -28,6 +28,7 @@ Users will be able to discover people in a selected city, understand what they h
 - Protected dashboard foundation
 - MySQL database integration and controlled migrations
 - Responsive authentication interfaces
+- In-app activity centre for connections, messages and Community Plans
 
 Profile, discovery and Community Plans functionality remains under active development and should not yet be treated as launched product functionality.
 
@@ -45,6 +46,10 @@ Profile, discovery and Community Plans functionality remains under active develo
 - Views for plans a user created or joined
 
 The first MVP will not include payments, ticket purchasing, live GPS, real-time chat, recurring plans, calendar synchronization, private invitations, approval workflows or push notifications.
+
+## In-app notifications
+
+Friendly records successful connection requests and acceptances, new private-message activity, and Community Plan joins, leaves, removals and cancellations. These records are a derived activity history; Connections, Messages and Community Plans remain the source of truth. Unread message activity is coalesced to one notification per conversation until it is read. Opening or explicitly marking an item changes only notification read state, and destinations are derived from controlled notification types rather than stored URLs. Delivery is in-app on normal page loads only; email, push, real-time updates and preferences are not included.
 
 ## Technology stack
 

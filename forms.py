@@ -131,6 +131,12 @@ class PlanActionForm(FlaskForm):
     submit = SubmitField("Continue")
 
 
+class NotificationActionForm(FlaskForm):
+    """Provide CSRF protection for notification read-state changes."""
+
+    submit = SubmitField("Continue")
+
+
 class ProfileForm(FlaskForm):
     """Validate creation and editing of a complete Friendly profile."""
 
