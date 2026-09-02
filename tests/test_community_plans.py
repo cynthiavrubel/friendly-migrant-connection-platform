@@ -3,7 +3,7 @@
 import os
 import tempfile
 import unittest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.dialects import mysql
 from sqlalchemy.schema import CreateIndex, CreateTable
@@ -15,7 +15,7 @@ os.environ["DATABASE_URL"] = f"sqlite:///{database_file.name}"
 os.environ["SECRET_KEY"] = "test-only-secret"
 
 from app import app, db  # noqa: E402
-from community_plans import CATEGORY_LABELS, PlanError, create_plan, join_plan, utc_now  # noqa: E402
+from community_plans import CATEGORY_LABELS, PlanError, create_plan, join_plan, utc_now, validate_plan_values  # noqa: E402
 from models import CommunityPlan, ConnectionIntent, Interest, Language, PlanParticipant, Profile, User  # noqa: E402
 
 
@@ -52,7 +52,7 @@ class CommunityPlanTests(unittest.TestCase):
         with self.client.session_transaction() as browser_session: browser_session["user_id"] = self.ids[name]
 
     def data(self, **changes):
-        value={"title":"Spider-Man at the cinema","category":"cinema-entertainment","description":"Let us watch a film together and have coffee afterwards.","country_code":"IT","city":" Milan ","starts_at":(utc_now()+timedelta(days=3)).strftime("%Y-%m-%dT%H:%M"),"meeting_place_text":"Cinema entrance near Duomo","capacity":"4"}
+        value={"title":"Spider-Man at the cinema","category":"cinema-entertainment","description":"Let us watch a film together and have coffee afterwards.","country_code":"IT","city":" Milan ","starts_at":(utc_now()+timedelta(days=3)).strftime("%Y-%m-%dT%H:%M"),"timezone":"UTC","meeting_place_text":"Cinema entrance near Duomo","capacity":"4"}
         value.update(changes); return value
 
     def direct_plan(self, creator="Alice", **changes):
@@ -82,6 +82,51 @@ class CommunityPlanTests(unittest.TestCase):
         for changes,expected in (({"capacity":"1"},b"between 2 and 20"),({"capacity":"21"},b"between 2 and 20"),({"starts_at":(utc_now()-timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M")},b"future date"),({"category":"invented"},b"valid choice")):
             page=self.create_via_route(**changes); self.assertIn(expected,page.data)
         with app.app_context(): self.assertEqual(db.session.scalar(db.select(db.func.count(CommunityPlan.id))),0)
+
+    def test_create_converts_local_wall_time_to_utc_and_displays_timezone(self):
+        response=self.create_via_route(starts_at="2027-07-15T18:00",timezone="Europe/Dublin")
+        self.assertIn(b"Europe/Dublin",response.data)
+        self.assertIn(b"18:00",response.data)
+        with app.app_context():
+            plan=db.session.scalar(db.select(CommunityPlan))
+            self.assertEqual(plan.timezone,"Europe/Dublin")
+            self.assertEqual(plan.starts_at.replace(tzinfo=None),datetime(2027,7,15,17,0))
+        self.assertIn(b"Europe/Dublin",self.client.get("/plans").data)
+        self.assertIn(b"Europe/Dublin",self.client.get("/plans/mine").data)
+
+    def test_invalid_and_dst_transition_times_are_normal_form_errors(self):
+        invalid=self.create_via_route(starts_at="2027-07-15T18:00",timezone="GMT+1")
+        self.assertIn(b"Choose a valid timezone",invalid.data)
+        xss=self.create_via_route(starts_at="2027-07-15T18:00",timezone="<script>alert(1)</script>")
+        self.assertNotIn(b"<script>alert(1)</script>",xss.data)
+        self.assertIn(b"&lt;script&gt;alert(1)&lt;/script&gt;",xss.data)
+        gap=self.create_via_route(starts_at="2027-03-28T01:30",timezone="Europe/Dublin")
+        self.assertIn(b"does not exist",gap.data)
+        fold=self.create_via_route(starts_at="2027-10-31T01:30",timezone="Europe/Dublin")
+        self.assertIn(b"occurs twice",fold.data)
+        with app.app_context(): self.assertEqual(db.session.scalar(db.select(db.func.count(CommunityPlan.id))),0)
+
+    def test_edit_shows_local_wall_time_and_recalculates_when_zone_changes(self):
+        self.create_via_route(starts_at="2027-07-15T18:00",timezone="Europe/Dublin")
+        with app.app_context(): plan_id=db.session.scalar(db.select(CommunityPlan.id))
+        edit_page=self.client.get(f"/plans/{plan_id}/edit").data
+        self.assertIn(b'value="2027-07-15T18:00"',edit_page)
+        self.client.post(f"/plans/{plan_id}/edit",data=self.data(starts_at="2027-07-15T18:00",timezone="America/New_York"))
+        with app.app_context():
+            plan=db.session.get(CommunityPlan,plan_id)
+            self.assertEqual(plan.timezone,"America/New_York")
+            self.assertEqual(plan.starts_at.replace(tzinfo=None),datetime(2027,7,15,22,0))
+
+    def test_future_validation_and_ordering_use_actual_utc_instants(self):
+        values=self.data(starts_at=datetime(2027,7,15,18,0),timezone="Asia/Tokyo",capacity=4)
+        with self.assertRaisesRegex(PlanError,"future"):
+            validate_plan_values(values,now=datetime(2027,7,15,17,30,tzinfo=timezone.utc))
+        with app.app_context():
+            self.direct_plan(title="Dublin first",starts_at=datetime(2035,7,15,18),timezone="Europe/Dublin")
+            self.direct_plan(title="New York later",starts_at=datetime(2035,7,15,18),timezone="America/New_York")
+            db.session.commit()
+        page=self.client.get("/plans").data
+        self.assertLess(page.index(b"Dublin first"),page.index(b"New York later"))
 
     def test_browse_uses_discovery_not_home_normalizes_city_and_orders(self):
         with app.app_context():

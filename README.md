@@ -51,6 +51,10 @@ The first MVP will not include payments, ticket purchasing, live GPS, real-time 
 
 Friendly records successful connection requests and acceptances, new private-message activity, and Community Plan joins, leaves, removals and cancellations. These records are a derived activity history; Connections, Messages and Community Plans remain the source of truth. Unread message activity is coalesced to one notification per conversation until it is read. Opening or explicitly marking an item changes only notification read state, and destinations are derived from controlled notification types rather than stored URLs. Delivery is in-app on normal page loads only; email, push, real-time updates and preferences are not included.
 
+## Community Plan timezones
+
+Plan date/time input is interpreted as wall-clock time in the selected IANA timezone (for example, `Europe/Dublin`), then converted to UTC for storage and lifecycle comparisons. Plan cards, details, and edit forms convert that UTC instant back to the plan's own timezone. Nonexistent and duplicated local times during daylight-saving transitions are rejected with a form error rather than silently choosing an unintended instant. Browser timezone detection is a creation-form convenience only; server-side validation remains authoritative, and `Europe/Dublin` is the fallback when no supported browser hint is available. Existing Sprint 9 plans are migrated with `UTC`, preserving their original stored instant and display meaning.
+
 ## Technology stack
 
 ### Backend

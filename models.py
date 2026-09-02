@@ -265,6 +265,8 @@ class CommunityPlan(db.Model):
     city = db.Column(db.String(100), nullable=False)
     city_normalized = db.Column(db.String(100), nullable=False)
     starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    # UTC remains authoritative; this IANA key preserves the host's civil time.
+    timezone = db.Column(db.String(64), nullable=False, default="UTC")
     meeting_place_text = db.Column(db.String(200))
     capacity = db.Column(db.Integer, nullable=False)
     status = db.Column(db.String(16), nullable=False, default="active")
