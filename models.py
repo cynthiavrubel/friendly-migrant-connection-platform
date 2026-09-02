@@ -243,3 +243,48 @@ class Message(db.Model):
 
     conversation = db.relationship("Conversation", back_populates="messages")
     sender = db.relationship("User", foreign_keys=[sender_id])
+
+
+class CommunityPlan(db.Model):
+    """A public local activity hosted by one Friendly member."""
+
+    __tablename__ = "community_plans"
+    __table_args__ = (
+        db.CheckConstraint("capacity >= 2 AND capacity <= 20", name="ck_community_plans_capacity"),
+        db.CheckConstraint("status IN ('active', 'cancelled')", name="ck_community_plans_status"),
+        db.Index("ix_plans_location_status_start", "country_code", "city_normalized", "status", "starts_at"),
+        db.Index("ix_plans_creator_start", "creator_id", "starts_at"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    creator_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    title = db.Column(db.String(120), nullable=False)
+    category = db.Column(db.String(40), nullable=False)
+    description = db.Column(db.String(1200), nullable=False)
+    country_code = db.Column(db.String(2), nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    city_normalized = db.Column(db.String(100), nullable=False)
+    starts_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    meeting_place_text = db.Column(db.String(200))
+    capacity = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(16), nullable=False, default="active")
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    cancelled_at = db.Column(db.DateTime(timezone=True))
+
+    creator = db.relationship("User", foreign_keys=[creator_id])
+    participants = db.relationship("PlanParticipant", back_populates="plan", cascade="all, delete-orphan", passive_deletes=True)
+
+
+class PlanParticipant(db.Model):
+    """Normalized membership in a community plan, including its host."""
+
+    __tablename__ = "plan_participants"
+    __table_args__ = (db.Index("ix_plan_participants_user_joined", "user_id", "joined_at"),)
+
+    plan_id = db.Column(db.Integer, db.ForeignKey("community_plans.id", ondelete="CASCADE"), primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    joined_at = db.Column(db.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))
+
+    plan = db.relationship("CommunityPlan", back_populates="participants")
+    user = db.relationship("User", foreign_keys=[user_id])

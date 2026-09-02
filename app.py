@@ -21,7 +21,7 @@ from connections import (
     states_for_users,
 )
 from discovery import discover_profiles, parse_filters, public_profile
-from forms import ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from forms import CommunityPlanForm, ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, PlanActionForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
 from messaging import (
     MessagingError,
     accessible_conversation,
@@ -37,7 +37,24 @@ from messaging import (
     unread_conversation_count,
 )
 from models import ConnectionIntent, ConnectionRequest, Interest, Language, Profile, User, db
-from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_name, slugify_interest
+from community_plans import (
+    CATEGORY_LABELS,
+    PLAN_CATEGORIES,
+    PlanError,
+    browse_plans,
+    cancel_plan,
+    create_plan,
+    edit_plan,
+    join_plan,
+    leave_plan,
+    my_plans,
+    participant_ids,
+    plan_details,
+    plan_is_past,
+    plan_state,
+    remove_participant,
+)
+from profile_data import CONNECTION_INTENTS, GENDER_CHOICES, INTERESTS, LANGUAGES, country_choices, country_name, slugify_interest
 from profile_photo_storage import PROFILE_PHOTO_KEY_PATTERN, build_profile_photo_storage
 from profile_photos import ProfilePhotoError, generate_profile_photo_key, process_profile_photo
 
@@ -397,6 +414,171 @@ def _positive_page_argument(default=None):
         return max(1, int(raw_page))
     except (TypeError, ValueError):
         return 1
+
+
+def _configure_plan_form(form):
+    form.category.choices = list(PLAN_CATEGORIES)
+    form.country_code.choices = country_choices()
+
+
+def _plan_form_data(form):
+    return {
+        "title": form.title.data,
+        "category": form.category.data,
+        "description": form.description.data,
+        "country_code": form.country_code.data,
+        "city": form.city.data,
+        "starts_at": form.starts_at.data,
+        "meeting_place_text": form.meeting_place_text.data,
+        "capacity": form.capacity.data,
+    }
+
+
+@app.get("/plans")
+@profile_complete_required
+def plans():
+    categories = set(request.args.getlist("category")) & set(CATEGORY_LABELS)
+    page = browse_plans(db.session, g.user.profile, _positive_page_argument(1), categories)
+    return render_template(
+        "plans.html",
+        plans_page=page,
+        categories=PLAN_CATEGORIES,
+        selected_categories=categories,
+        category_labels=CATEGORY_LABELS,
+        plan_state=plan_state,
+    )
+
+
+@app.route("/plans/create", methods=["GET", "POST"])
+@profile_complete_required
+def create_community_plan():
+    form = CommunityPlanForm()
+    _configure_plan_form(form)
+    if request.method == "GET":
+        form.country_code.data = g.user.profile.discovery_country_code
+        form.city.data = g.user.profile.discovery_city
+        form.capacity.data = 6
+    if form.validate_on_submit():
+        try:
+            plan = create_plan(db.session, g.user, _plan_form_data(form))
+            db.session.commit()
+            flash("Your community plan is ready.", "success")
+            return redirect(url_for("community_plan", plan_id=plan.id))
+        except PlanError as error:
+            db.session.rollback()
+            getattr(form, error.code, form.starts_at).errors.append(error.message)
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception("Community plan creation failed because of a database error.")
+            flash("We couldn't create that plan right now. Please try again.", "error")
+    return render_template("plan_form.html", form=form, editing=False)
+
+
+@app.get("/plans/mine")
+@login_required
+def my_community_plans():
+    return render_template(
+        "my_plans.html",
+        sections=my_plans(db.session, g.user.id),
+        category_labels=CATEGORY_LABELS,
+        plan_state=plan_state,
+    )
+
+
+@app.get("/plans/<int:plan_id>")
+@login_required
+def community_plan(plan_id):
+    plan = plan_details(db.session, plan_id)
+    if plan is None:
+        abort(404)
+    ids = participant_ids(plan)
+    return render_template(
+        "plan_detail.html",
+        plan=plan,
+        participant_ids=ids,
+        is_participant=g.user.id in ids,
+        is_host=g.user.id == plan.creator_id,
+        state=plan_state(plan, len(ids)),
+        category_label=CATEGORY_LABELS.get(plan.category, "Other"),
+        action_form=PlanActionForm(),
+    )
+
+
+@app.route("/plans/<int:plan_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_community_plan(plan_id):
+    plan = plan_details(db.session, plan_id)
+    if plan is None or plan.creator_id != g.user.id:
+        abort(404)
+    if plan.status != "active" or plan_is_past(plan):
+        flash("Past or cancelled plans cannot be edited.", "info")
+        return redirect(url_for("community_plan", plan_id=plan.id))
+    form = CommunityPlanForm(obj=plan)
+    _configure_plan_form(form)
+    if form.validate_on_submit():
+        try:
+            edit_plan(db.session, plan.id, g.user.id, _plan_form_data(form))
+            db.session.commit()
+            flash("Your plan has been updated.", "success")
+            return redirect(url_for("community_plan", plan_id=plan.id))
+        except PlanError as error:
+            db.session.rollback()
+            getattr(form, error.code, form.capacity).errors.append(error.message)
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception("Community plan editing failed because of a database error.")
+            flash("We couldn't update that plan right now. Please try again.", "error")
+    return render_template("plan_form.html", form=form, editing=True, plan=plan)
+
+
+def _plan_transition(action, plan_id, success_message, *, participant_id=None):
+    form = PlanActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+    try:
+        if participant_id is None:
+            action(db.session, plan_id, g.user.id)
+        else:
+            action(db.session, plan_id, participant_id, g.user.id)
+        db.session.commit()
+        flash(success_message, "success")
+    except PlanError as error:
+        db.session.rollback()
+        if error.code == "not_found":
+            abort(404)
+        flash(error.message, "info")
+    except IntegrityError:
+        db.session.rollback()
+        flash("That plan changed while you were joining. Please try again.", "info")
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Community plan transition failed because of a database error.")
+        flash("We couldn't update that plan right now. Please try again.", "error")
+    return redirect(url_for("community_plan", plan_id=plan_id))
+
+
+@app.post("/plans/<int:plan_id>/join")
+@profile_complete_required
+def join_community_plan(plan_id):
+    return _plan_transition(join_plan, plan_id, "You joined the plan.")
+
+
+@app.post("/plans/<int:plan_id>/leave")
+@login_required
+def leave_community_plan(plan_id):
+    return _plan_transition(leave_plan, plan_id, "You left the plan.")
+
+
+@app.post("/plans/<int:plan_id>/cancel")
+@login_required
+def cancel_community_plan(plan_id):
+    return _plan_transition(cancel_plan, plan_id, "The plan has been cancelled.")
+
+
+@app.post("/plans/<int:plan_id>/participants/<int:user_id>/remove")
+@login_required
+def remove_plan_participant(plan_id, user_id):
+    return _plan_transition(remove_participant, plan_id, "The participant has been removed.", participant_id=user_id)
 
 
 @app.get("/messages")

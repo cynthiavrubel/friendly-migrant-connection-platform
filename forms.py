@@ -5,8 +5,8 @@ from datetime import date
 
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField
-from wtforms import BooleanField, DateField, HiddenField, PasswordField, SelectField, SelectMultipleField, StringField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, Optional, ValidationError
+from wtforms import BooleanField, DateField, DateTimeLocalField, HiddenField, IntegerField, PasswordField, SelectField, SelectMultipleField, StringField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 
 from profile_data import GENDER_CHOICES, country_choices
 
@@ -109,6 +109,26 @@ class MessageForm(FlaskForm):
         validators=[DataRequired(), Length(max=2000)],
     )
     submit = SubmitField("Send")
+
+
+class CommunityPlanForm(FlaskForm):
+    """Validate plan content; authorization and capacity changes live in the service."""
+
+    title = StringField("Plan title", filters=[strip_whitespace], validators=[DataRequired(), Length(min=3, max=120)])
+    category = SelectField("Category", choices=[], validators=[DataRequired()])
+    description = TextAreaField("Description", filters=[strip_whitespace], validators=[DataRequired(), Length(min=10, max=1200)])
+    country_code = SelectField("Country", choices=[], validators=[DataRequired()])
+    city = StringField("City", filters=[strip_whitespace], validators=[DataRequired(), Length(min=2, max=100)])
+    starts_at = DateTimeLocalField("Date and time", format="%Y-%m-%dT%H:%M", validators=[DataRequired()])
+    meeting_place_text = StringField("Public meeting place", filters=[strip_whitespace], validators=[Optional(), Length(max=200)])
+    capacity = IntegerField("Capacity", validators=[DataRequired(), NumberRange(min=2, max=20)])
+    submit = SubmitField("Save plan")
+
+
+class PlanActionForm(FlaskForm):
+    """Provide CSRF protection for joining, leaving, removal, and cancellation."""
+
+    submit = SubmitField("Continue")
 
 
 class ProfileForm(FlaskForm):
