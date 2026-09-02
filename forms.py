@@ -9,6 +9,7 @@ from wtforms import BooleanField, DateField, DateTimeLocalField, HiddenField, In
 from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 
 from profile_data import GENDER_CHOICES, country_choices
+from safety import REPORT_REASONS
 from timezones import is_valid_timezone
 
 
@@ -135,6 +136,22 @@ class PlanActionForm(FlaskForm):
     """Provide CSRF protection for joining, leaving, removal, and cancellation."""
 
     submit = SubmitField("Continue")
+
+
+class SafetyActionForm(FlaskForm):
+    """CSRF-only confirmation for blocking and unblocking."""
+
+    submit = SubmitField("Continue")
+
+
+class UserReportForm(FlaskForm):
+    reason = SelectField("Reason", choices=REPORT_REASONS, validators=[DataRequired()])
+    details = TextAreaField(
+        "Additional details (optional)",
+        filters=[strip_whitespace],
+        validators=[Optional(), Length(max=2000)],
+    )
+    submit = SubmitField("Submit report")
 
 
 class NotificationActionForm(FlaskForm):

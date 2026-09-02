@@ -24,7 +24,7 @@
                 <section aria-labelledby="interests-heading"><h2 id="interests-heading">Interests</h2><ul class="tag-list">{% for interest in profile.interests %}<li>{{ interest.name }}</li>{% endfor %}</ul></section>
                 <section aria-labelledby="intentions-heading"><h2 id="intentions-heading">Here for</h2><ul class="tag-list">{% for intent in profile.connection_intents %}<li>{{ intent.name }}</li>{% endfor %}</ul></section>
             </div>
-            <footer class="profile-card-footer"><a class="submit-button action-link" href="{{ url_for('edit_profile') }}">Edit profile</a></footer>
+            <footer class="profile-card-footer"><a class="submit-button action-link" href="{{ url_for('edit_profile') }}">Edit profile</a><a href="{{ url_for('blocked_people') }}">Blocked users</a></footer>
         </article>
     </main>
 </body>

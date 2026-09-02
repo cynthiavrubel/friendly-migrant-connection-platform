@@ -21,7 +21,7 @@ from connections import (
     states_for_users,
 )
 from discovery import discover_profiles, parse_filters, public_profile
-from forms import CommunityPlanForm, ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, NotificationActionForm, PlanActionForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm
+from forms import CommunityPlanForm, ConnectionActionForm, ConnectionRequestForm, LoginForm, LogoutForm, MessageForm, NotificationActionForm, PlanActionForm, ProfileForm, RegistrationForm, RemoveProfilePhotoForm, SafetyActionForm, UserReportForm
 from messaging import (
     MessagingError,
     accessible_conversation,
@@ -75,6 +75,7 @@ from notifications import (
     unread_notification_count,
 )
 from timezones import DEFAULT_TIMEZONE, format_plan_datetime, timezone_choices, utc_to_local
+from safety import SafetyError, block_user, blocked_users, is_blocked_pair, report_user, unblock_user
 
 app = Flask(__name__)
 app.config.from_object(DevelopmentConfig)
@@ -302,6 +303,8 @@ def person_profile(user_id):
     """Render only another member's deliberately public profile fields."""
     if user_id == g.user.id:
         return redirect(url_for("profile"))
+    if is_blocked_pair(db.session, g.user.id, user_id):
+        abort(404)
     relationship = relationship_between(db.session, g.user.id, user_id)
     # Pending and established relationships remain viewable if the other
     # member later pauses new requests. Discovery still requires openness.
@@ -317,6 +320,7 @@ def person_profile(user_id):
         profile=profile_record,
         gender_labels=dict(GENDER_CHOICES),
         relationship_state=relationship_state(g.user.id, user_id, relationship),
+        safety_form=SafetyActionForm(),
     )
 
 
@@ -326,6 +330,8 @@ def connect_person(user_id):
     """Confirm and create a connection request without trusting client identity."""
     if user_id == g.user.id:
         abort(400)
+    if is_blocked_pair(db.session, g.user.id, user_id):
+        abort(404)
     relationship = relationship_between(db.session, g.user.id, user_id)
     # Existing pending/accepted relationships remain viewable if someone later
     # pauses new requests; discovery eligibility itself still requires openness.
@@ -380,7 +386,82 @@ def connections():
         sections=sections,
         active_tab=tab,
         action_form=ConnectionActionForm(),
+        safety_form=SafetyActionForm(),
     )
+
+
+@app.post("/people/<int:user_id>/block")
+@login_required
+def block_person(user_id):
+    form = SafetyActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+    if user_id == g.user.id:
+        abort(400)
+    try:
+        block_user(db.session, g.user.id, user_id)
+        db.session.commit()
+        flash("This person has been blocked. Your previous connection and future plan participation were removed.", "success")
+    except SafetyError as error:
+        db.session.rollback()
+        if error.code == "not_found":
+            abort(404)
+        flash(error.message, "info")
+    except (IntegrityError, SQLAlchemyError):
+        db.session.rollback()
+        app.logger.exception("Blocking failed because of a database error.")
+        flash("We couldn't complete that safety action right now. Please try again.", "error")
+    return redirect(url_for("blocked_people"))
+
+
+@app.post("/people/<int:user_id>/unblock")
+@login_required
+def unblock_person(user_id):
+    form = SafetyActionForm()
+    if not form.validate_on_submit():
+        abort(400)
+    if user_id == g.user.id or db.session.get(User, user_id) is None:
+        abort(404)
+    try:
+        unblock_user(db.session, g.user.id, user_id)
+        db.session.commit()
+        flash("This person has been unblocked. Previous connections are not restored automatically.", "success")
+    except SQLAlchemyError:
+        db.session.rollback()
+        app.logger.exception("Unblocking failed because of a database error.")
+        flash("We couldn't complete that safety action right now. Please try again.", "error")
+    return redirect(url_for("blocked_people"))
+
+
+@app.get("/settings/blocked-users")
+@login_required
+def blocked_people():
+    return render_template("blocked_users.html", blocks=blocked_users(db.session, g.user.id), form=SafetyActionForm())
+
+
+@app.route("/people/<int:user_id>/report", methods=["GET", "POST"])
+@login_required
+def report_person(user_id):
+    if user_id == g.user.id:
+        abort(400)
+    target = db.session.get(User, user_id)
+    if target is None or target.profile is None or is_blocked_pair(db.session, g.user.id, user_id):
+        abort(404)
+    form = UserReportForm()
+    if form.validate_on_submit():
+        try:
+            report_user(db.session, g.user.id, user_id, form.reason.data, form.details.data)
+            db.session.commit()
+            flash("Thanks. Your report has been submitted for review.", "success")
+            return redirect(url_for("person_profile", user_id=user_id))
+        except SafetyError as error:
+            db.session.rollback()
+            getattr(form, error.code, form.reason).errors.append(error.message)
+        except SQLAlchemyError:
+            db.session.rollback()
+            app.logger.exception("A private report could not be stored.")
+            flash("We couldn't submit that report right now. Please try again.", "error")
+    return render_template("report_user.html", form=form, person=target)
 
 
 def _connection_transition(action, relationship_id, success_message, tab, *, notifier=None):
@@ -661,7 +742,8 @@ def conversation(conversation_id):
     except MessagingError:
         abort(404)
     other = other_participant(conversation_record, g.user.id)
-    can_send = active_connection_between(db.session, g.user.id, other.id)
+    blocked = is_blocked_pair(db.session, g.user.id, other.id)
+    can_send = active_connection_between(db.session, g.user.id, other.id) and not blocked
     mark_conversation_read(db.session, conversation_record.id, g.user.id)
     db.session.commit()
     page = message_page(db.session, conversation_record.id, _positive_page_argument())
@@ -671,6 +753,7 @@ def conversation(conversation_id):
         other=other,
         messages_page=page,
         can_send=can_send,
+        blocked=blocked,
         form=MessageForm(),
         format_message_time=format_message_time,
     )
