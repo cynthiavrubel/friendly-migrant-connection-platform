@@ -5,7 +5,7 @@ does not create accounts or alter application data, so each test suite controls
 its own disposable fixture.
 """
 
-STANDARD_VIEWPORT_WIDTHS = (320, 360, 375, 390, 412, 480, 768, 1024, 1280, 1440)
+STANDARD_VIEWPORT_WIDTHS = (320, 360, 375, 390, 412, 480, 768, 1024, 1280, 1440, 1920)
 
 
 def verify_responsive_layout(page, base_url, routes, widths=STANDARD_VIEWPORT_WIDTHS):

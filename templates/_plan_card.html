@@ -1,0 +1,8 @@
+<article class="plan-card friendly-card">
+    <header><span class="plan-category">{{ category_labels.get(plan.category, 'Other') }}</span><span class="plan-status is-{{ plan_state(plan, plan.participants|length) }}">{% set state = plan_state(plan, plan.participants|length) %}{{ 'Spots available' if state == 'available' else state|capitalize }}</span></header>
+    <h2><a href="{{ url_for('community_plan', plan_id=plan.id) }}">{{ plan.title }}</a></h2>
+    <p class="plan-when"><time datetime="{{ plan.starts_at.isoformat() }}">{{ plan.starts_at.strftime('%a %d %b · %H:%M') }}</time></p>
+    <p class="plan-location">{{ plan.city }}, {{ country_name(plan.country_code) }}</p>
+    <p class="plan-description">{{ plan.description|truncate(150, true, '…') }}</p>
+    <footer><span>Hosted by {{ plan.creator.first_name }}</span><strong>{{ plan.participants|length }} / {{ plan.capacity }} going</strong><a href="{{ url_for('community_plan', plan_id=plan.id) }}">View plan <span aria-hidden="true">→</span></a></footer>
+</article>
