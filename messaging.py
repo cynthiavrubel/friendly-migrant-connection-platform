@@ -102,8 +102,8 @@ def start_conversation(session, actor_id, other_id):
     return conversation
 
 
-def accessible_conversation(session, conversation_id, actor_id):
-    conversation = session.scalar(
+def accessible_conversation(session, conversation_id, actor_id, *, lock=False):
+    statement = (
         db.select(Conversation)
         .options(
             joinedload(Conversation.user_low).joinedload(User.profile),
@@ -114,6 +114,9 @@ def accessible_conversation(session, conversation_id, actor_id):
             db.or_(Conversation.user_low_id == actor_id, Conversation.user_high_id == actor_id),
         )
     )
+    if lock:
+        statement = statement.with_for_update()
+    conversation = session.scalar(statement)
     if conversation is None:
         raise MessagingError("That conversation could not be found.", "not_found")
     return conversation
@@ -124,7 +127,9 @@ def other_participant(conversation, actor_id):
 
 
 def send_message(session, conversation_id, actor_id, body):
-    conversation = accessible_conversation(session, conversation_id, actor_id)
+    # Serializing writes per conversation also makes unread notification
+    # coalescing deterministic under concurrent sends on MySQL.
+    conversation = accessible_conversation(session, conversation_id, actor_id, lock=True)
     other = other_participant(conversation, actor_id)
     if not active_connection_between(session, actor_id, other.id):
         raise MessagingError("This conversation is read-only because you are no longer connected.", "read_only")
